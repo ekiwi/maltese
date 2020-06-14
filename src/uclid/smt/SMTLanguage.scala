@@ -137,11 +137,8 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 107
   override val hashCode = computeHash(inTypes, outType)
   override val md5hashCode = computeMD5Hash(inTypes, outType)
-  override def toString = {
-    "array [" +
-    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
-    "] " + outType
-  }
+  override def toString =
+    "(Array " + Utils.join((inTypes.toIterator ++ Iterator(outType)).map(_.toString).toSeq, " ") + ")"
   override def isArray = true
   override val typeNamePrefix = "array"
 }
@@ -749,6 +746,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
 case class ArraySelectOperation(e: Expr, index: List[Expr])
   extends Expr (e.typ.asInstanceOf[ArrayType].outType)
 {
+  require(e.typ.isArray)
   override val hashId = 308
   override val hashCode = computeHash(index, e)
   override val md5hashCode = computeMD5Hash(e, index)
@@ -758,6 +756,7 @@ case class ArraySelectOperation(e: Expr, index: List[Expr])
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
 {
+  require(e.typ.isArray)
   override val hashId = 309
   override val hashCode = computeHash(index, e, value)
   override val md5hashCode = computeMD5Hash(e, index, value)
@@ -772,7 +771,7 @@ case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extend
   override val md5hashCode = computeMD5Hash(letBindings, expr)
   override def toString = {
     val bindings = Utils.join(letBindings.map(p => "(%s %s)".format(p._1.toString(), p._2.toString())), " ")
-    "(let (%s) %s)".format(bindings)
+    "(let (%s) %s)".format(bindings, expr)
   }
   override val isConstant = expr.isConstant
 }
@@ -784,8 +783,9 @@ case class FunctionApplication(e: Expr, args: List[Expr])
   override val hashId = 311
   override val hashCode = computeHash(args, e)
   override val md5hashCode = computeMD5Hash(args, e)
-  override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
+  override def toString = if(args.isEmpty) { e.toString } else {
+    s"(${e.toString} " + args.map(_.toString).mkString(" ") + ")"
+  }
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 

@@ -36,34 +36,143 @@
 
 package uclid.smt
 
+import java.io.{File, PrintWriter}
+
 import scala.io.Source
 import scala.collection.mutable
 import scala.util.matching.Regex
-
-case class State(sym: Symbol, init: Option[Expr] = None, next: Option[Expr]= None)
-case class SymbolicTransitionSystem(name: Option[String], inputs: Seq[Symbol], states: Seq[State],
-                                    outputs: Seq[Tuple2[String,Expr]] = Seq(),
-                                    constraints: Seq[Expr] = Seq(), bad: Seq[Expr] = Seq(), fair: Seq[Expr] = Seq())
-
+import scala.sys.process._
+import util.control.Breaks._
 
 object Btor2 {
-  def load(filename: String): SymbolicTransitionSystem = {
+  def load(filename: String): TransitionSystem = {
     val ff = Source.fromFile(filename)
     val sys = read(ff.getLines())
     ff.close()
     sys
   }
-  def read(lines: Iterator[String]): SymbolicTransitionSystem = Btor2Parser.read(lines)
-  def serialize(sys: SymbolicTransitionSystem, startIndex: Int = 1): Seq[String] = Btor2Serializer.serialize(sys)
+  def read(lines: Iterator[String]): TransitionSystem = Btor2Parser.read(lines)
+  def readWitness(lines: Iterable[String]): Witness = Btor2WitnessParser.read(lines, parseMax = 1).head
+  def serialize(sys: TransitionSystem): Seq[String] = Btor2Serializer.serialize(sys, false)
+  def serialize(sys: TransitionSystem, skipOutput: Boolean): Seq[String] = Btor2Serializer.serialize(sys, skipOutput)
+  def createBtorMC(): ModelChecker = new BtormcModelChecker()
+  def createCosa2MC(): ModelChecker = new Cosa2ModelChecker()
+}
+
+class BtormcModelChecker extends ModelChecker {
+  // TODO: check to make sure binary exists
+  override val name: String = "btormc"
+  override val supportsOutput: Boolean = false
+  override def makeArgs(kMax: Int, inputFile: Option[String]): Seq[String] = {
+    val prefix = if(kMax > 0) Seq("btormc", s"--kmax $kMax") else Seq("btormc")
+    inputFile match {
+      case None => prefix
+      case Some(file) => prefix ++ Seq(s"$file")
+    }
+  }
+  override protected def isFail(ret: Int, res: Seq[String]): Boolean = {
+    assert(ret == 0, s"We expect btormc to always return 0, not $ret. Maybe there was an error:\n" + res.mkString("\n"))
+    super.isFail(ret, res)
+  }
+}
+
+class Cosa2ModelChecker extends ModelChecker {
+  // TODO: check to make sure binary exists
+  override val name: String = "cosa2"
+  override val supportsOutput: Boolean = true
+  override val supportsMultipleProperties: Boolean = false
+  override def makeArgs(kMax: Int, inputFile: Option[String]): Seq[String] = {
+    val base = Seq("cosa2", "--engine bmc")
+    val prefix = if(kMax > 0) base ++ Seq(s"--bound $kMax") else base
+    inputFile match {
+      case None => throw new RuntimeException("cosa2 only supports file based input. Please supply a filename!")
+      case Some(file) => prefix ++ Seq(s"$file")
+    }
+  }
+  private val WrongUsage = 3
+  private val Unknown = 2
+  private val Sat = 1
+  private val Unsat = 0
+  override protected def isFail(ret: Int, res: Seq[String]): Boolean = {
+    assert(ret != WrongUsage, "There was an error trying to call cosa2:\n"+res.mkString("\n"))
+    val fail = super.isFail(ret, res)
+    if(fail) { assert(ret == Sat) } else { assert(ret == Unknown) /* bmc only returns unknown because it cannot prove unsat */}
+    fail
+  }
+}
+
+abstract class ModelChecker extends IsModelChecker {
+  override val name: String
+  def makeArgs(kMax: Int, inputFile: Option[String] = None): Seq[String]
+  val supportsOutput: Boolean
+  val supportsMultipleProperties: Boolean = true
+  override def check(sys: TransitionSystem, kMax: Int = -1, fileName: Option[String] = None, defined: Seq[DefineFun] = Seq(), uninterpreted: Seq[Symbol] = Seq()): ModelCheckResult = {
+    assert(defined.isEmpty, "UF not supported!")
+    assert(uninterpreted.isEmpty, "UF not supported!")
+    val checkSys = if(supportsMultipleProperties) sys else sys.unifyProperties() //.unifyConstraints()
+    fileName match {
+      case None => checkWithPipe(checkSys, kMax)
+      case Some(file) => checkWithFile(file, checkSys, kMax)
+    }
+  }
+
+  /* called to check the results of the solver */
+  protected def isFail(ret: Int, res: Seq[String]): Boolean = res.nonEmpty && res.head.startsWith("sat")
+
+  private def checkWithFile(fileName: String, sys: TransitionSystem, kMax: Int): ModelCheckResult = {
+    val btorWrite = new PrintWriter(fileName)
+    val lines = Btor2.serialize(sys, !supportsOutput)
+    lines.foreach{l => btorWrite.println(l) }
+    btorWrite.close()
+
+    // execute model checker
+    val cmd = makeArgs(kMax, Some(fileName)).mkString(" ")
+    val stdout = mutable.ArrayBuffer[String]()
+    val stderr = mutable.ArrayBuffer[String]()
+    val ret = cmd ! ProcessLogger(stdout.append(_), stderr.append(_))
+    if(stderr.nonEmpty) { println(s"ERROR: ${stderr.mkString("\n")}") }
+
+    // write stdout to file for debugging
+    val res: Seq[String] = stdout
+    val resultFileName = fileName + ".out"
+    val stdoutWrite = new PrintWriter(resultFileName)
+    res.foreach(l => stdoutWrite.println(l))
+    stdoutWrite.close()
+
+    //print(cmd)
+    //println(s" -> $ret")
+
+    // check if it starts with sat
+    if(isFail(ret, res)) {
+      val witness = Btor2.readWitness(res)
+      ModelCheckFail(witness)
+    } else {
+      ModelCheckSuccess()
+    }
+  }
+
+  private def checkWithPipe(sys: TransitionSystem, kMax: Int): ModelCheckResult = {
+    val checker = new uclid.InteractiveProcess(makeArgs(kMax).toList)
+    val lines = Btor2.serialize(sys, !supportsOutput)
+    lines.foreach{l => checker.writeInput(l) ; println(l)}
+    checker.finishInput()
+    val res = checker.readOutput()
+    res match {
+      case None => ModelCheckSuccess()
+      case Some(msg) =>
+        val witness = Btor2.readWitness(res)
+        ModelCheckFail(witness)
+    }
+  }
 }
 
 
 object Btor2Serializer {
-  def serialize(sys: SymbolicTransitionSystem, startIndex: Int = 1): Seq[String] = {
-    val expr_cache = mutable.HashMap[Expr,Int]()
-    val sort_cache = mutable.HashMap[Type,Int]()
+  def serialize(sys: TransitionSystem, skipOutput: Boolean): Seq[String] = {
+    val expr_cache = mutable.HashMap[Expr, Int]()
+    val sort_cache = mutable.HashMap[Type, Int]()
     val lines = mutable.ArrayBuffer[String]()
-    var index = startIndex
+    var index = 1
 
     def line(l: String): Int = {
       val ii = index
@@ -71,6 +180,8 @@ object Btor2Serializer {
       index += 1
       ii
     }
+
+    def comment(c: String): Unit = { lines += s"; $c" }
 
     // Type/Sort serialization
     def t(typ: Type): Int = sort_cache.getOrElseUpdate(typ,{typ match {
@@ -86,13 +197,18 @@ object Btor2Serializer {
         line(s"read ${t(expr.typ)} ${s(array)} ${s(index)}")
       case ArrayStoreOperation(array, List(index), value) =>
         line(s"write ${t(expr.typ)} ${s(array)} ${s(index)} ${s(value)}")
-      case Symbol(id, typ) => throw new RuntimeException(s"Unknown symbol $id : $typ")
+      case Symbol(id, typ) =>
+        val knownSymbol = expr_cache.collectFirst{ case (s: Symbol, _) if s.id == id => s }
+        val suffix = knownSymbol.map(s => s" (Previously declared symbol of similar name: ${s.id} : ${s.typ})").getOrElse("")
+        throw new RuntimeException(s"Unknown symbol $id : $typ$suffix")
       case OperatorApplication(op, List(a)) => unary(op, a, expr.typ)
       case OperatorApplication(op, List(a, b)) => binary(op, a, b, expr.typ)
       case OperatorApplication(ITEOp, List(cond, a, b)) =>
         line(s"ite ${t(expr.typ)} ${s(cond)} ${s(a)} ${s(b)}")
       case BooleanLit(value) => lit(if(value) BigInt(1) else BigInt(0), 1)
       case BitVectorLit(value, w) => lit(value, w)
+      case ConstArray(BitVectorLit(value, width), arrTyp) if value == 0 => lit(value, width)
+      case ConstArray(BooleanLit(value), _) => lit(if(value) BigInt(1) else BigInt(0), 1)
       case other => throw new NotImplementedError(s"TODO: implement serialization for $other")
     }})
 
@@ -102,7 +218,11 @@ object Btor2Serializer {
       if(value == 0) line(s"zero $typ")
       else if(value == 1) line(s"one $typ")
       else if(value == mask) line(s"ones $typ")
-      else line(s"const $typ ${value.toString(2)}")
+      else {
+        val digits = value.toString(2)
+        val padded = digits.reverse.padTo(w, '0').reverse
+        line(s"const $typ $padded")
+      }
     }
 
     def unary(op: Operator, a: Expr, typ: Type): Int = op match {
@@ -111,6 +231,8 @@ object Btor2Serializer {
       case BVExtractOp(hi, lo) => line(s"slice ${t(typ)} ${s(a)} $hi $lo")
       case BVZeroExtOp(_, by) => line(s"uext ${t(typ)} ${s(a)} $by")
       case BVSignExtOp(_, by) => line(s"sext ${t(typ)} ${s(a)} $by")
+      case q: ForallOp => throw new NotImplementedError(s"btor2 does not support quantifiers!: $q")
+      case q: ExistsOp => throw new NotImplementedError(s"btor2 does not support quantifiers!: $q")
       case other => throw new NotImplementedError(s"TODO: implement conversion for $other")
     }
 
@@ -121,13 +243,13 @@ object Btor2Serializer {
         case EqualityOp => "eq"
         case InequalityOp => "neq"
         case BVGTUOp(_) => "ugt"
-        case BVGEUOp(_) => "uge"
+        case BVGEUOp(_) => "ugte"
         case BVLTUOp(_) => "ult"
-        case BVLEUOp(_) => "ule"
+        case BVLEUOp(_) => "ulte"
         case BVGTOp(_) => "sgt"
-        case BVGEOp(_) => "sge"
+        case BVGEOp(_) => "sgte"
         case BVLTOp(_) => "slt"
-        case BVLEOp(_) => "sle"
+        case BVLEOp(_) => "slte"
         case BVAndOp(_) => "and"
         case ConjunctionOp => "and"
         case BVOrOp(_) => "or"
@@ -150,25 +272,162 @@ object Btor2Serializer {
     // make sure that BV<1> and Bool alias to the same type
     sort_cache(BitVectorType(1)) = t(BoolType)
 
-    // declare states
-    sys.states.foreach { st =>
-      expr_cache(st.sym) = line(s"state ${t(st.sym.typ)} ${st.sym.id}")
-    }
     // declare inputs
     sys.inputs.foreach { ii =>
       expr_cache(ii) = line(s"input ${t(ii.typ)} ${ii.id}")
     }
-    // define state init and next
-    sys.states.foreach { st =>
-      st.init.foreach{ init => line(s"init ${t(init.typ)} ${s(st.sym)} ${s(init)}") }
-      st.next.foreach{ next => line(s"next ${t(next.typ)} ${s(st.sym)} ${s(next)}") }
-    }
-    // define outputs, bad states, constraints and fairness properties
-    val lbls = Seq("constraint" -> sys.constraints, "bad" -> sys.bad, "fair" -> sys.fair)
-    lbls.foreach { case (lbl, exprs) => exprs.foreach{ e => line(s"$lbl ${s(e)}") } }
-    sys.outputs.foreach{ case (name, expr) => line(s"output ${s(expr)} $name")}
 
-    lines.toSeq
+    // define state init
+    sys.states.foreach { st =>
+      // calculate init expression before declaring the state
+      // this is required by btormc (presumably to avoid cycles in the init expression)
+      st.init.foreach { init => comment(s"${st.sym}.init := $init"); s(init) }
+
+      expr_cache(st.sym) = line(s"state ${t(st.sym.typ)} ${st.sym.id}")
+
+      st.init.foreach { init => line(s"init ${t(init.typ)} ${s(st.sym)} ${s(init)}") }
+    }
+
+    // define outputs first to allow other labels to refer to the output symbols
+    sys.outputs.foreach{ case (name, expr) =>
+      expr_cache(Symbol(name, expr.typ)) = s(expr)
+      if(!skipOutput) line(s"output ${s(expr)} $name")
+    }
+
+    // define state next
+    sys.states.foreach { st =>
+      st.next.foreach{ next =>
+        comment(s"${st.sym}.next := $next")
+        line(s"next ${t(next.typ)} ${s(st.sym)} ${s(next)}")
+      }
+    }
+
+    // define bad states, constraints and fairness properties
+    val lbls = Seq("constraint" -> sys.constraints, "bad" -> sys.bad, "fair" -> sys.fair)
+    lbls.foreach { case (lbl, exprs) => exprs.zipWithIndex.foreach { case(e, i) =>
+      comment(s"$lbl$i := $e")
+      line(s"$lbl ${s(e)}") 
+    }}
+
+    lines
+  }
+}
+
+object Btor2WitnessParser {
+  private trait State
+  private case class Start() extends State
+  private case class WaitForProp() extends State
+  private case class Props(bad: Seq[Int], fair: Seq[Int]) extends State
+  private case class States(ii: Int) extends State
+  private case class Inputs(ii: Int) extends State
+  private case class Assignment(ii: Int, value: BigInt, index: Option[BigInt], symbol: String)
+
+  def read(lines: Iterable[String], parseMax: Int = 1): Seq[Witness] = {
+    var state: State = Start()
+    val witnesses = mutable.ArrayBuffer[Witness]()
+    // work in progress witness
+    var failedBad: Seq[Int] = Seq()
+    val regInit = mutable.HashMap[Int, BigInt]()
+    val memInit = mutable.HashMap[Int, Seq[(BigInt, BigInt)]]()
+    val allInputs = mutable.ArrayBuffer[Map[Int, BigInt]]()
+    val inputs = mutable.Map[Int, BigInt]()
+
+    def done = witnesses.length >= parseMax
+
+    def parseAssignment(parts: Seq[String]): Assignment = {
+      val is_array = parts.length == 4
+      val is_bv = parts.length == 3
+      assert(is_array || is_bv, s"Expected assignment to consist of 3-4 parts, not: $parts")
+      val ii = Integer.parseUnsignedInt(parts.head)
+      val (value, index) = if(is_array) {
+        assert(parts(1).startsWith("[") && parts(1).endsWith("]"), s"Expected `[index]`, not `${parts(1)}` in: $parts")
+        val ii = BigInt(parts(1).drop(1).dropRight(1), 2)
+        (BigInt(parts(2), 2), Some(ii))
+      } else { (BigInt(parts(1), 2), None) }
+      Assignment(ii, value, index, symbol = parts.last)
+    }
+
+    def parse_line(line: String): Unit = {
+      if (line.isEmpty) { /* skip blank lines */ return }
+      if (line.startsWith(";")) { /* skip comments */ return }
+      val parts = line.split(" ")
+      def uintStartingAt(ii: Int) = Integer.parseUnsignedInt(line.substring(ii))
+
+      //print(state)
+
+      def finishWitness(): State = {
+        witnesses.append(Witness(failedBad=failedBad, regInit=regInit.toMap, memInit=memInit.toMap, inputs=allInputs))
+        regInit.clear()
+        memInit.clear()
+        inputs.clear()
+        Start()
+      }
+      def newInputs(): State = {
+        val ii = uintStartingAt(1)
+        assert(ii == allInputs.length, s"Expected inputs @${allInputs.length}, not @$ii")
+        Inputs(ii)
+      }
+      def newStates(): State = {
+        val ii = uintStartingAt(1)
+        assert(ii == 0, s"We currently only support a single state frame!")
+        States(ii)
+      }
+      def finishInputFrame() {
+        allInputs.append(inputs.toMap)
+        inputs.clear()
+      }
+
+      state = state match {
+        case s: Start => {
+          assert(line == "sat", s"Expected witness header to be `sat`, not `$line`")
+          WaitForProp()
+        }
+        case s: WaitForProp => {
+          parts.foreach{p => assert(p.startsWith("b") || p.startsWith("j"), s"unexpected property name: $p in $line")}
+          val props = parts.map{p => (p.substring(0,1), Integer.parseUnsignedInt(p.substring(1)))}
+          val next = Props(bad = props.filter(_._1 == "b").map(_._2), fair = props.filter(_._1 == "j").map(_._2))
+          assert(next.fair.isEmpty, "Fairness properties are not supported yet.")
+          failedBad = next.bad
+          next
+        }
+        case s: Props => {
+          assert(line == "#0", s"Expected initial state frame, not: $line")
+          newStates()
+        }
+        case s: States => {
+          if(line == ".") { finishWitness() }
+          else if(line.startsWith("@")) { newInputs() } else {
+            val a = parseAssignment(parts)
+            a.index match {
+              case None => regInit(a.ii) = a.value
+              case Some(index) =>
+                val priorWrites = memInit.getOrElse(a.ii, Seq())
+                memInit(a.ii) = priorWrites ++ Seq((index, a.value))
+            }
+            s
+          }
+        }
+        case s: Inputs => {
+          if(line == ".") { finishInputFrame() ; finishWitness() }
+          else if(line.startsWith("@")) { finishInputFrame() ; newInputs() }
+          else if(line.startsWith("#")) { finishInputFrame() ; newStates()  } else {
+            val a = parseAssignment(parts)
+            assert(a.index.isEmpty, s"Input frames are not expected to contain array assignments!")
+            inputs(a.ii) = a.value
+            s
+          }
+        }
+      }
+      //println(s" -> $state")
+    }
+
+    breakable { lines.foreach{ ll =>
+      //println(ll.trim)
+      parse_line(ll.trim)
+      if(done) break
+    }}
+
+    witnesses
   }
 }
 
@@ -178,7 +437,7 @@ object Btor2Parser {
     "and", "nand", "nor", "or", "xnor", "xor", "rol", "ror", "sll", "sra", "srl", "add", "mul", "sdiv", "udiv", "smod",
     "srem", "urem", "sub", "saddo", "uaddo", "sdivo", "udivo", "smulo", "umulo", "ssubo", "usubo", "concat")
 
-  def read(lines: Iterator[String]): SymbolicTransitionSystem = {
+  def read(lines: Iterator[String]): TransitionSystem = {
     val sorts = new mutable.HashMap[Int,Type]()
     val states = new mutable.HashMap[Int,State]()
     val inputs = new mutable.ArrayBuffer[Symbol]()
@@ -191,7 +450,7 @@ object Btor2Parser {
     def is_unique(name: String): Boolean = !unique_names.contains(name)
     def unique_name(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(is_unique(_)).next
 
-    // while not part of the btor2 spec, yosys annotates the systems name
+    // while not part of the btor2 spec, yosys annotates the system's name
     var name: Option[String] = None
 
     def to_bool(expr: Expr) = OperatorApplication(EqualityOp, List(expr, BitVectorLit(1,1)))
@@ -242,6 +501,7 @@ object Btor2Parser {
       op match {
         case "not" | "inc" | "dec" => OperatorApplication(NegationOp, List(expr))
         case "neg" => expr
+        case  "redand" | "redor" | "redxor" => expr
       }
     }
 
@@ -254,13 +514,13 @@ object Btor2Parser {
       def app(op: Operator) = OperatorApplication(op, List(a, b))
       op match {
         case "ugt" => app(BVGTUOp(a_w))
-        case "uge" => app(BVGEUOp(a_w))
+        case "ugte" => app(BVGEUOp(a_w))
         case "ult" => app(BVLTUOp(a_w))
-        case "ule" => app(BVLEUOp(a_w))
+        case "ulte" => app(BVLEUOp(a_w))
         case "sgt" => app(BVGTOp(a_w))
-        case "sge" => app(BVGEOp(a_w))
+        case "sgte" => app(BVGEOp(a_w))
         case "slt" => app(BVLTOp(a_w))
-        case "sle" => app(BVLEOp(a_w))
+        case "slte" => app(BVLEOp(a_w))
         case "and" => app(BVAndOp(w))
         case "nand" => OperatorApplication(BVNotOp(w), List(app(BVAndOp(w))))
         case "nor" => OperatorApplication(BVNotOp(w), List(app(BVOrOp(w))))
@@ -444,7 +704,7 @@ object Btor2Parser {
     //println(yosys_lables)
     // TODO: use yosys_lables to fill in missing symbol names
 
-    SymbolicTransitionSystem(name, inputs=inputs.toSeq, states=states.values.toSeq,
+    TransitionSystem(name, inputs=inputs.toSeq, states=states.values.toSeq,
       outputs = labels("output").toSeq,
       constraints = labels("constraint").map(_._2).toSeq,
       bad = labels("bad").map(_._2).toSeq,
