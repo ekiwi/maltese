@@ -36,7 +36,7 @@
 
 package uclid.smt
 
-import paso.chisel.SMTSimplifier
+import paso.SMTSimplifier
 import uclid.vcd
 
 import scala.collection.mutable
