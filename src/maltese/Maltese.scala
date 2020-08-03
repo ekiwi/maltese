@@ -19,6 +19,13 @@ object Maltese {
     // load transition system from file
     val sys = Btor2.load(filename)
 
+    println(sys.name.get)
+    sys.inputs.foreach(i => println(s"input ${i.id} : ${i.typ}"))
+    sys.states.foreach(s => println(s"state ${s.sym.id} : ${s.sym.typ} = [init] ${s.init} [next] ${s.next}"))
+    sys.outputs.foreach(o => println(s"output ${o._1} : ${o._2.typ} = ${o._2}"))
+    sys.constraints.foreach(c => println(s"assume ${c}"))
+    sys.bad.foreach(b => println(s"assert ${b}"))
+
     // build model checking context
 
     // do we start with an arbitrary state or a defined state?
