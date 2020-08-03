@@ -656,6 +656,16 @@ case class Int2BVOp(w : Int) extends BVResultOp(w) {
     Utils.assert(args(0).typ.isInt, "Argument to Int2BVOp must be an integer")
   }
 }
+case object XorOp extends BoolResultOp {
+  override val hashId = 246
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "xor"
+  override def typeCheck(args: List[Expr]) : Unit = {
+    Utils.assert(args.size > 1, "Expected two or more arguments to 'or'.")
+    checkAllArgTypes(args, BoolType)
+  }
+}
 // Expressions
 abstract class Expr(val typ: Type) extends Hashable {
   val hashBaseId : Int = 662

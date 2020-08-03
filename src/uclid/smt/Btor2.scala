@@ -490,8 +490,15 @@ object Btor2Parser {
           OperatorApplication(EqualityOp, List(expr, BitVectorLit(mask, expr_w)))
         case "redor" =>
           OperatorApplication(InequalityOp, List(expr, BitVectorLit(0, expr_w)))
-        case "redxor" => throw new RuntimeException("TODO: implement xor reduction")
+        case "redxor" => redxor(expr, expr_w)
         case other => throw new RuntimeException(s"Unknown unary op $other")
+      }
+    }
+
+    def redxor(e: Expr, width: Int): Expr = {
+      if(width == 1) { e } else {
+        val bits = (0 until width).map(i => to_bool(OperatorApplication(BVExtractOp(i, i), List(e))))
+        bits.reduce((a,b) => OperatorApplication(XorOp, List(a,b)))
       }
     }
 
