@@ -2,13 +2,13 @@
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
-import org.scalatest._
+import utest._
 
-class TestSpec extends FlatSpec {
-
-  it should "something" in {
-    println("test")
+object TestSpec extends TestSuite {
+  val tests = Tests {
+    test("something") {
+      println("test")
+    }
   }
-
 }
 
