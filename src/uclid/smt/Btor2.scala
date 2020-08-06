@@ -53,8 +53,8 @@ object Btor2 {
   }
   def read(lines: Iterator[String]): TransitionSystem = Btor2Parser.read(lines)
   def readWitness(lines: Iterable[String]): Witness = Btor2WitnessParser.read(lines, parseMax = 1).head
-  def serialize(sys: TransitionSystem): Seq[String] = Btor2Serializer.serialize(sys, false)
-  def serialize(sys: TransitionSystem, skipOutput: Boolean): Seq[String] = Btor2Serializer.serialize(sys, skipOutput)
+  def serialize(sys: TransitionSystem): Iterable[String] = Btor2Serializer.serialize(sys, false)
+  def serialize(sys: TransitionSystem, skipOutput: Boolean): Iterable[String] = Btor2Serializer.serialize(sys, skipOutput)
   def createBtorMC(): ModelChecker = new BtormcModelChecker()
   def createCosa2MC(): ModelChecker = new Cosa2ModelChecker()
 }
@@ -70,7 +70,7 @@ class BtormcModelChecker extends ModelChecker {
       case Some(file) => prefix ++ Seq(s"$file")
     }
   }
-  override protected def isFail(ret: Int, res: Seq[String]): Boolean = {
+  override protected def isFail(ret: Int, res: Iterable[String]): Boolean = {
     assert(ret == 0, s"We expect btormc to always return 0, not $ret. Maybe there was an error:\n" + res.mkString("\n"))
     super.isFail(ret, res)
   }
@@ -93,7 +93,7 @@ class Cosa2ModelChecker extends ModelChecker {
   private val Unknown = 2
   private val Sat = 1
   private val Unsat = 0
-  override protected def isFail(ret: Int, res: Seq[String]): Boolean = {
+  override protected def isFail(ret: Int, res: Iterable[String]): Boolean = {
     assert(ret != WrongUsage, "There was an error trying to call cosa2:\n"+res.mkString("\n"))
     val fail = super.isFail(ret, res)
     if(fail) { assert(ret == Sat) } else { assert(ret == Unknown) /* bmc only returns unknown because it cannot prove unsat */}
@@ -117,7 +117,7 @@ abstract class ModelChecker extends IsModelChecker {
   }
 
   /* called to check the results of the solver */
-  protected def isFail(ret: Int, res: Seq[String]): Boolean = res.nonEmpty && res.head.startsWith("sat")
+  protected def isFail(ret: Int, res: Iterable[String]): Boolean = res.nonEmpty && res.head.startsWith("sat")
 
   private def checkWithFile(fileName: String, sys: TransitionSystem, kMax: Int): ModelCheckResult = {
     val btorWrite = new PrintWriter(fileName)
@@ -129,11 +129,11 @@ abstract class ModelChecker extends IsModelChecker {
     val cmd = makeArgs(kMax, Some(fileName)).mkString(" ")
     val stdout = mutable.ArrayBuffer[String]()
     val stderr = mutable.ArrayBuffer[String]()
-    val ret = cmd ! ProcessLogger(stdout.append(_), stderr.append(_))
+    val ret = cmd ! ProcessLogger(stdout.append, stderr.append)
     if(stderr.nonEmpty) { println(s"ERROR: ${stderr.mkString("\n")}") }
 
     // write stdout to file for debugging
-    val res: Seq[String] = stdout
+    val res = stdout
     val resultFileName = fileName + ".out"
     val stdoutWrite = new PrintWriter(resultFileName)
     res.foreach(l => stdoutWrite.println(l))
@@ -168,7 +168,7 @@ abstract class ModelChecker extends IsModelChecker {
 
 
 object Btor2Serializer {
-  def serialize(sys: TransitionSystem, skipOutput: Boolean): Seq[String] = {
+  def serialize(sys: TransitionSystem, skipOutput: Boolean): Iterable[String] = {
     val expr_cache = mutable.HashMap[Expr, Int]()
     val sort_cache = mutable.HashMap[Type, Int]()
     val lines = mutable.ArrayBuffer[String]()
@@ -356,7 +356,7 @@ object Btor2WitnessParser {
       //print(state)
 
       def finishWitness(): State = {
-        witnesses.append(Witness(failedBad=failedBad, regInit=regInit.toMap, memInit=memInit.toMap, inputs=allInputs))
+        witnesses.append(Witness(failedBad=failedBad, regInit=regInit.toMap, memInit=memInit.toMap, inputs=allInputs.toSeq))
         regInit.clear()
         memInit.clear()
         inputs.clear()
@@ -427,7 +427,7 @@ object Btor2WitnessParser {
       if(done) break
     }}
 
-    witnesses
+    witnesses.toSeq
   }
 }
 

@@ -123,8 +123,8 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
   private val memCount = memStates.size
 
   // mutable state
-  private val data = new mutable.ArraySeq[BigInt](inputs.size + states.size + outputs.size)
-  private val memories = new mutable.ArraySeq[Memory](memCount)
+  private val data = new Array[BigInt](inputs.size + states.size + outputs.size)
+  private val memories = new Array[Memory](memCount)
 
   // mutable state indexing
   private val memStateIdToArrayIndex = memStates.map(_._2).zipWithIndex.toMap
