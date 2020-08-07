@@ -142,7 +142,7 @@ object Btor2Parser {
           val name = if(parts.length > 3) parts(3) else unique_name("state")
           assert(is_unique(name))
           unique_names += name
-          val sym = if(isArray) BVSymbol(name, width) else ArraySymbol(name, indexWidth, dataWidth)
+          val sym = if(isArray) ArraySymbol(name, indexWidth, dataWidth) else BVSymbol(name, width)
           states.put(id, State(sym, None, None))
           Some(sym)
         case "next" =>
