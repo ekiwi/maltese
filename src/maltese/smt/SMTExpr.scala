@@ -170,6 +170,14 @@ object SMTEqual {
   }
 }
 
+object SMTIte {
+  def apply(cond: BVExpr, tru: SMTExpr, fals: SMTExpr): SMTExpr = (tru, fals) match {
+    case (ab : BVExpr, bb : BVExpr) => BitVectorIte(cond, ab, bb)
+    case (aa : ArrayExpr, ba: ArrayExpr) => ArrayIte(cond, aa, ba)
+    case _ => throw new RuntimeException(s"Cannot mux $tru and $fals")
+  }
+}
+
 // minimal function application expressions needed for the SMT Transition System Encoding
 private case class BVRawExpr(serialized: String, width: Int) extends BVExpr
 private case class ArrayRawExpr(serialized: String, indexWidth: Int, dataWidth: Int) extends ArrayExpr

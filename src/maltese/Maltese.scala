@@ -4,7 +4,6 @@
 
 package maltese
 
-import uclid.smt.Btor2
 
 object MalteseApp extends App {
   if(args.length < 1) {
@@ -17,12 +16,12 @@ object MalteseApp extends App {
 object Maltese {
   def load(filename: String): Unit = {
     // load transition system from file
-    val sys = Btor2.load(filename)
+    val sys = smt.Btor2.load(filename)
 
-    println(sys.name.get)
-    sys.inputs.foreach(i => println(s"input ${i.id} : ${i.typ}"))
-    sys.states.foreach(s => println(s"state ${s.sym.id} : ${s.sym.typ} = [init] ${s.init} [next] ${s.next}"))
-    sys.outputs.foreach(o => println(s"output ${o._1} : ${o._2.typ} = ${o._2}"))
+    println(sys.name)
+    sys.inputs.foreach(i => println(s"input ${i.name} : bv<${i.width}>"))
+    sys.states.foreach(s => println(s"state ${s.sym} = [init] ${s.init} [next] ${s.next}"))
+    sys.outputs.foreach(o => println(s"output ${o.name} : bv<${o.e.width}> = ${o.e}"))
     sys.constraints.foreach(c => println(s"assume ${c}"))
     sys.bad.foreach(b => println(s"assert ${b}"))
 

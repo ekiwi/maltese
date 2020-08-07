@@ -5,7 +5,7 @@
 package maltese.smt
 
 case class State(sym: SMTSymbol, init: Option[SMTExpr], next: Option[SMTExpr])
-case class Signal(name: Option[String], e: BVExpr)
+case class Signal(name: String, e: BVExpr)
 case class TransitionSystem(
- name: String, inputs: Seq[BVSymbol], states: Seq[State], signals: Seq[Signal],
- outputs: Set[Int], constraints: Set[Int], bad: Set[Int], fair: Set[Int])
+ name: String, inputs: Seq[BVSymbol], states: Seq[State], outputs: Seq[Signal],
+ constraints: Seq[BVExpr], bad: Seq[BVExpr], fair: Seq[BVExpr])
