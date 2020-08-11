@@ -23,21 +23,20 @@ object Btor2Parser {
     "and", "nand", "nor", "or", "xnor", "xor", "rol", "ror", "sll", "sra", "srl", "add", "mul", "sdiv", "udiv", "smod",
     "srem", "urem", "sub", "saddo", "uaddo", "sdivo", "udivo", "smulo", "umulo", "ssubo", "usubo", "concat")
 
-  def read(lines: Iterator[String]): TransitionSystem = {
+  def read(lines: Iterator[String], inlineSignals: Boolean = false): TransitionSystem = {
     val bvSorts = new mutable.HashMap[Int,Int]()
     val arraySorts = new mutable.HashMap[Int,(Int,Int)]()
     val states = new mutable.HashMap[Int,State]()
     val inputs = new mutable.ArrayBuffer[BVSymbol]()
     val signals = new mutable.HashMap[Int,SMTExpr]()
-    val labels = Seq("fair", "bad", "constraint", "output")
-      .map{l => l -> new mutable.ArrayBuffer[Tuple2[String, SMTExpr]]()}.toMap
+    val labels = new mutable.ArrayBuffer[(Int, (SignalLabel, String))]()
     val yosysLabels = new mutable.HashMap[Int,String]()
 
 
     // unique name generator
-    val unique_names = new mutable.HashSet[String]()
-    def is_unique(name: String): Boolean = !unique_names.contains(name)
-    def unique_name(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(is_unique(_)).next
+    val uniqueNames = new mutable.HashSet[String]()
+    def isUnique(name: String): Boolean = !uniqueNames.contains(name)
+    def nameFromPrefix(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next
 
     // while not part of the btor2 spec, yosys annotates the system's name
     var name: Option[String] = None
@@ -86,7 +85,10 @@ object Btor2Parser {
         assert(parts.length > 3 + offset, s"parts(${3 + offset}) does not exist! ${parts.mkString(", ")}")
         val nid = Integer.parseInt(parts(3 + offset))
         assert(signals.contains(nid), s"Unknown node #$nid")
-        signals(nid)
+        val e = signals(nid)
+        if(inlineSignals) { e } else {
+          SMTSymbol.fromExpr(s"s$nid", e)
+        }
       }
       def bvExpr(offset: Int) = expr(offset).asInstanceOf[BVExpr]
       def arrayExpr(offset: Int) = expr(offset).asInstanceOf[ArrayExpr]
@@ -126,22 +128,23 @@ object Btor2Parser {
       val new_expr = cmd  match {
         case "sort" => parseSort(id, parts) ; None
         case "input" =>
-          val name = if(parts.length > 3) parts(3) else unique_name("input")
-          assert(is_unique(name))
-          unique_names += name
+          val name = if(parts.length > 3) parts(3) else nameFromPrefix("input")
+          assert(isUnique(name))
+          uniqueNames += name
           val input = BVSymbol(name, width)
           inputs.append(input)
           Some(input)
         case lbl @ ("output" | "bad" | "constraint" | "fair") =>
-          val name = if(parts.length > 3) parts(3) else unique_name(lbl)
-          assert(is_unique(name))
-          unique_names += name
-          labels(lbl) += (name -> expr(-1))
+          val name = if(parts.length > 3) parts(3) else nameFromPrefix(lbl)
+          assert(isUnique(name))
+          uniqueNames += name
+          val nid = Integer.parseInt(parts(2))
+          labels.append((nid, (SignalLabel.stringToLabel(lbl), name)))
           None
         case "state" =>
-          val name = if(parts.length > 3) parts(3) else unique_name("state")
-          assert(is_unique(name))
-          unique_names += name
+          val name = if(parts.length > 3) parts(3) else nameFromPrefix("state")
+          assert(isUnique(name))
+          uniqueNames += name
           val sym = if(isArray) ArraySymbol(name, indexWidth, dataWidth) else BVSymbol(name, width)
           states.put(id, State(sym, None, None))
           Some(sym)
@@ -198,14 +201,18 @@ object Btor2Parser {
     //println(yosys_lables)
     // TODO: use yosys_lables to fill in missing symbol names
 
-    TransitionSystem(name.getOrElse("Top"),
-      inputs=inputs.toSeq,
-      states=states.values.toSeq,
 
-      outputs = labels("output").toSeq.map{ case (n,e) => Signal(n,e.asInstanceOf[BVExpr]) },
-      constraints = labels("constraint").map(_._2).toSeq.map(_.asInstanceOf[BVExpr]),
-      bad = labels("bad").map(_._2).toSeq.map(_.asInstanceOf[BVExpr]),
-      fair = labels("fair").map(_._2).toSeq.map(_.asInstanceOf[BVExpr]))
+    // if we decide to inline, we only keep the signals that have labels (sort of the leaf nodes)
+    val keepSignals: Iterable[(Int, SMTExpr)] = if(inlineSignals) labels.map(l => l._1 -> signals(l._1)) else signals
+    val lblMap = labels.toMap
+    val tsSignals = keepSignals.map { case (i, expr) =>
+      lblMap.get(i) match {
+        case Some((lbl, name)) => Signal(name, expr, lbl)
+        case None => Signal("s" + i, expr)
+      }
+    }.toList
+
+    TransitionSystem(name.getOrElse("Top"), inputs=inputs.toSeq, states=states.values.toSeq, signals = tsSignals)
   }
 
   private def parseConst(format: String, str: String): BigInt = format match {

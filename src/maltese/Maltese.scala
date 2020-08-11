@@ -20,10 +20,9 @@ object Maltese {
 
     println(sys.name)
     sys.inputs.foreach(i => println(s"input ${i.name} : bv<${i.width}>"))
+    sys.signals.foreach(s => println(s"${s.lbl} ${s.name} = ${s.e}"))
     sys.states.foreach(s => println(s"state ${s.sym} = [init] ${s.init} [next] ${s.next}"))
-    sys.outputs.foreach(o => println(s"output ${o.name} : bv<${o.e.width}> = ${o.e}"))
-    sys.constraints.foreach(c => println(s"assume ${c}"))
-    sys.bad.foreach(b => println(s"assert ${b}"))
+
 
     // build model checking context
 
