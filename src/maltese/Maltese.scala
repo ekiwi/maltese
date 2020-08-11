@@ -18,6 +18,8 @@ object Maltese {
     // load transition system from file
     val sys = smt.Btor2.load(filename)
 
+    println(s"Loaded $filename")
+
     println(sys.name)
     sys.inputs.foreach(i => println(s"input ${i.name} : bv<${i.width}>"))
     sys.signals.foreach(s => println(s"${s.lbl} ${s.name} = ${s.e}"))

@@ -9,9 +9,9 @@ import scala.io.Source
 import scala.util.matching.Regex
 
 object Btor2 {
-  def load(filename: String): TransitionSystem = {
+  def load(filename: String, inlineSignals: Boolean = false): TransitionSystem = {
     val ff = Source.fromFile(filename)
-    val sys = Btor2Parser.read(ff.getLines())
+    val sys = Btor2Parser.read(ff.getLines(), inlineSignals)
     ff.close()
     sys
   }
@@ -23,7 +23,7 @@ object Btor2Parser {
     "and", "nand", "nor", "or", "xnor", "xor", "rol", "ror", "sll", "sra", "srl", "add", "mul", "sdiv", "udiv", "smod",
     "srem", "urem", "sub", "saddo", "uaddo", "sdivo", "udivo", "smulo", "umulo", "ssubo", "usubo", "concat")
 
-  def read(lines: Iterator[String], inlineSignals: Boolean = false): TransitionSystem = {
+  def read(lines: Iterator[String], inlineSignals: Boolean): TransitionSystem = {
     val bvSorts = new mutable.HashMap[Int,Int]()
     val arraySorts = new mutable.HashMap[Int,(Int,Int)]()
     val states = new mutable.HashMap[Int,State]()
