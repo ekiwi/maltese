@@ -178,6 +178,13 @@ object SMTIte {
   }
 }
 
+object SMTExpr {
+  def serializeType(e: SMTExpr): String = e match {
+    case b: BVExpr => s"bv<${b.width}>"
+    case a: ArrayExpr => s"bv<${a.indexWidth}> -> bv<${a.dataWidth}>"
+  }
+}
+
 // Raw SMTLib encoded expressions as an escape hatch used in the [[SMTTransitionSystemEncoder]]
 private case class BVRawExpr(serialized: String, width: Int) extends BVExpr
 private case class ArrayRawExpr(serialized: String, indexWidth: Int, dataWidth: Int) extends ArrayExpr

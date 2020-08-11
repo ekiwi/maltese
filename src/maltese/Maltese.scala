@@ -4,6 +4,8 @@
 
 package maltese
 
+import smt.TransitionSystem
+
 
 object MalteseApp extends App {
   if(args.length < 1) {
@@ -20,10 +22,7 @@ object Maltese {
 
     println(s"Loaded $filename")
 
-    println(sys.name)
-    sys.inputs.foreach(i => println(s"input ${i.name} : bv<${i.width}>"))
-    sys.signals.foreach(s => println(s"${s.lbl} ${s.name} = ${s.e}"))
-    sys.states.foreach(s => println(s"state ${s.sym} = [init] ${s.init} [next] ${s.next}"))
+    println(TransitionSystem.serialize(sys))
 
 
     // build model checking context
