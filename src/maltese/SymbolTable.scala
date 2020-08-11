@@ -4,8 +4,6 @@
 
 package maltese
 
-import uclid.smt
-
 class SymbolTable private(nameToId: Seq[(String, Int)]) {
 
 }
