@@ -162,17 +162,17 @@ object Btor2Parser {
           checkSort(BVLiteral((BigInt(1) << width) - 1, width))
         case ext @ ("uext" | "sext") =>
           val by = Integer.parseInt(parts(4))
-          checkSort(Extend(bvExpr(0), by, signed = ext.startsWith("s")))
+          checkSort(BVExtend(bvExpr(0), by, signed = ext.startsWith("s")))
         case "slice" =>
           val msb = Integer.parseInt(parts(4))
           val lsb = Integer.parseInt(parts(5))
-          checkSort(Slice(bvExpr(0), msb, lsb))
+          checkSort(BVSlice(bvExpr(0), msb, lsb))
         case op if unary.contains(op) =>
           checkSort(parseUnary(op, bvExpr(0)))
         case "eq" =>
           checkSort(SMTEqual(expr(0), expr(1)))
         case "neq" =>
-          checkSort(Not(SMTEqual(expr(0), expr(1))))
+          checkSort(BVNot(SMTEqual(expr(0), expr(1))))
         case "concat" =>
           checkSort(BVConcat(bvExpr(0), bvExpr(1)))
         case op if binary.contains(op) =>
@@ -215,30 +215,30 @@ object Btor2Parser {
   }
 
   private def parseUnary(op: String, expr: BVExpr): BVExpr = op match {
-    case "not" => Not(expr)
+    case "not" => BVNot(expr)
     case "inc" => BVOp(Op.Add, expr, BVLiteral(1, expr.width))
     case "dec" => BVOp(Op.Sub, expr, BVLiteral(1, expr.width))
-    case "neg" => Negate(expr)
-    case "redand" => ReduceAnd(expr)
-    case "redor" => ReduceOr(expr)
-    case "redxor" => ReduceXor(expr)
+    case "neg" => BVNegate(expr)
+    case "redand" => BVReduceAnd(expr)
+    case "redor" => BVReduceOr(expr)
+    case "redxor" => BVReduceXor(expr)
     case other => throw new RuntimeException(s"Unknown unary op $other")
   }
 
   private def parseBinary(op: String, a: BVExpr, b: BVExpr): BVExpr = op match {
     case "ugt" => BVComparison(Compare.Greater, a, b, signed = false)
     case "ugte" => BVComparison(Compare.GreaterEqual, a, b, signed = false)
-    case "ult" => Not(BVComparison(Compare.GreaterEqual, a, b, signed = false))
-    case "ulte" => Not(BVComparison(Compare.Greater, a, b, signed = false))
+    case "ult" => BVNot(BVComparison(Compare.GreaterEqual, a, b, signed = false))
+    case "ulte" => BVNot(BVComparison(Compare.Greater, a, b, signed = false))
     case "sgt" => BVComparison(Compare.Greater, a, b, signed = true)
     case "sgte" => BVComparison(Compare.GreaterEqual, a, b, signed = true)
-    case "slt" => Not(BVComparison(Compare.GreaterEqual, a, b, signed = true))
-    case "slte" => Not(BVComparison(Compare.Greater, a, b, signed = true))
+    case "slt" => BVNot(BVComparison(Compare.GreaterEqual, a, b, signed = true))
+    case "slte" => BVNot(BVComparison(Compare.Greater, a, b, signed = true))
     case "and" => BVOp(Op.And, a, b)
-    case "nand" => Not(BVOp(Op.And, a, b))
-    case "nor" => Not(BVOp(Op.Or, a, b))
+    case "nand" => BVNot(BVOp(Op.And, a, b))
+    case "nor" => BVNot(BVOp(Op.Or, a, b))
     case "or" => BVOp(Op.Or, a, b)
-    case "xnor" => Not(BVOp(Op.Xor, a, b))
+    case "xnor" => BVNot(BVOp(Op.Xor, a, b))
     case "xor" => BVOp(Op.Xor, a, b)
     case "rol" | "ror" => throw new NotImplementedError("TODO: implement rotates on bv<N>")
     case "sll" => BVOp(Op.ShiftLeft, a, b)

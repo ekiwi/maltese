@@ -30,51 +30,51 @@ case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
   def toStringWithType: String = name + " : bv" + width.toString
 }
 
-sealed trait UnaryBVExpr extends BVExpr { def e: BVExpr }
-case class Extend(e: BVExpr, by: Int, signed: Boolean) extends UnaryBVExpr {
+sealed trait BVUnaryExpr extends BVExpr { def e: BVExpr }
+case class BVExtend(e: BVExpr, by: Int, signed: Boolean) extends BVUnaryExpr {
   assert(by >= 0, "Extension must be non-negative!")
   override val width: Int = e.width + by
   override def toString: String = if(signed) { s"sext($e, $by)" } else { s"zext($e, $by)" }
 }
 // also known as bit extract operation
-case class Slice(e: BVExpr, hi: Int, lo: Int) extends UnaryBVExpr {
+case class BVSlice(e: BVExpr, hi: Int, lo: Int) extends BVUnaryExpr {
   assert(lo >= 0, s"lo (lsb) must be non-negative!")
   assert(hi >= lo, s"hi (msb) must not be smaller than lo (lsb): msb: $hi lsb: $lo")
   assert(e.width > hi, s"Out off bounds hi (msb) access: width: ${e.width} msb: $hi")
   override def width: Int = hi - lo + 1
   override def toString: String = if(hi == lo) s"$e[$hi]" else s"$e[$hi:$lo]"
 }
-case class Not(e: BVExpr) extends UnaryBVExpr {
+case class BVNot(e: BVExpr) extends BVUnaryExpr {
   override val width: Int = e.width
   override def toString: String = s"not($e)"
 }
-case class Negate(e: BVExpr) extends UnaryBVExpr {
+case class BVNegate(e: BVExpr) extends BVUnaryExpr {
   override val width: Int = e.width
   override def toString: String = s"neg($e)"
 }
-case class ReduceOr(e: BVExpr) extends UnaryBVExpr {
+case class BVReduceOr(e: BVExpr) extends BVUnaryExpr {
   override def width: Int = 1
   override def toString: String = s"redor($e)"
 }
-case class ReduceAnd(e: BVExpr) extends UnaryBVExpr {
+case class BVReduceAnd(e: BVExpr) extends BVUnaryExpr {
   override def width: Int = 1
   override def toString: String = s"redand($e)"
 }
-case class ReduceXor(e: BVExpr) extends UnaryBVExpr {
+case class BVReduceXor(e: BVExpr) extends BVUnaryExpr {
   override def width: Int = 1
   override def toString: String = s"redxor($e)"
 }
 
-sealed trait BinaryBVExpr extends BVExpr {
+sealed trait BVBinaryExpr extends BVExpr {
   def a: BVExpr
   def b: BVExpr
 }
-case class Implies(a: BVExpr, b: BVExpr) extends BinaryBVExpr {
+case class BVImplies(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == 1 && b.width == 1, s"Both arguments need to be 1-bit!")
   override def width: Int = 1
   override def toString: String = s"impl($a, $b)"
 }
-case class BVEqual(a: BVExpr, b: BVExpr) extends BinaryBVExpr {
+case class BVEqual(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1
   override def toString: String = s"eq($a, $b)"
@@ -82,7 +82,7 @@ case class BVEqual(a: BVExpr, b: BVExpr) extends BinaryBVExpr {
 object Compare extends Enumeration {
   val Greater, GreaterEqual = Value
 }
-case class BVComparison(op: Compare.Value, a: BVExpr, b: BVExpr, signed: Boolean) extends BinaryBVExpr {
+case class BVComparison(op: Compare.Value, a: BVExpr, b: BVExpr, signed: Boolean) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1
   override def toString: String = op match {
@@ -106,12 +106,12 @@ object Op extends Enumeration {
   val UnsignedRem = Value("urem")
   val Sub = Value("sub")
 }
-case class BVOp(op: Op.Value, a: BVExpr, b: BVExpr) extends BinaryBVExpr {
+case class BVOp(op: Op.Value, a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override val width: Int = a.width
   override def toString: String = s"$op($a, $b)"
 }
-case class BVConcat(a: BVExpr, b: BVExpr) extends BinaryBVExpr {
+case class BVConcat(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   override val width: Int = a.width + b.width
   override def toString: String = s"concat($a, $b)"
 }
@@ -120,7 +120,7 @@ case class ArrayRead(array: ArrayExpr, index: BVExpr) extends BVExpr {
   override val width: Int = array.dataWidth
   override def toString: String = s"$array[$index])"
 }
-case class BitVectorIte(cond: BVExpr, tru: BVExpr, fals: BVExpr) extends BVExpr {
+case class BVIte(cond: BVExpr, tru: BVExpr, fals: BVExpr) extends BVExpr {
   assert(cond.width == 1, s"Condition needs to be a 1-bit value not ${cond.width}-bit!")
   assert(tru.width == fals.width, s"Both branches need to be of the same width! ${tru.width} vs ${fals.width}")
   override val width: Int = tru.width
@@ -157,7 +157,7 @@ case class ArrayEqual(a: ArrayExpr, b: ArrayExpr) extends BVExpr {
   override def width: Int = 1
   override def toString: String = s"eq($a, $b)"
 }
-case class ConstantArray(e: BVExpr, indexWidth: Int) extends ArrayExpr {
+case class ArrayConstant(e: BVExpr, indexWidth: Int) extends ArrayExpr {
   override val dataWidth: Int = e.width
   override def toString: String = s"([$e] x ${ (BigInt(1) << indexWidth) - 1 })"
 }
@@ -172,12 +172,12 @@ object SMTEqual {
 
 object SMTIte {
   def apply(cond: BVExpr, tru: SMTExpr, fals: SMTExpr): SMTExpr = (tru, fals) match {
-    case (ab : BVExpr, bb : BVExpr) => BitVectorIte(cond, ab, bb)
+    case (ab : BVExpr, bb : BVExpr) => BVIte(cond, ab, bb)
     case (aa : ArrayExpr, ba: ArrayExpr) => ArrayIte(cond, aa, ba)
     case _ => throw new RuntimeException(s"Cannot mux $tru and $fals")
   }
 }
 
-// minimal function application expressions needed for the SMT Transition System Encoding
+// Raw SMTLib encoded expressions as an escape hatch used in the [[SMTTransitionSystemEncoder]]
 private case class BVRawExpr(serialized: String, width: Int) extends BVExpr
 private case class ArrayRawExpr(serialized: String, indexWidth: Int, dataWidth: Int) extends ArrayExpr
