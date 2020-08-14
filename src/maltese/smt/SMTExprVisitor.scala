@@ -14,6 +14,7 @@ object SMTExprVisitor {
   }
   def map[T <: SMTExpr](f: SMTExpr => SMTExpr)(e: T): T =
     map(b => f(b).asInstanceOf[BVExpr], a => f(a).asInstanceOf[ArrayExpr])(e)
+  def foreach[T <: SMTExpr](f: SMTExpr => Unit)(e: T): Unit = map(b => { f(b) ; b }, a => { f(a) ; a })(e)
 
   private def map(e: BVExpr, bv: BVFun, ar: ArrayFun): BVExpr = e match {
     // nullary

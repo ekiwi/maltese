@@ -4,6 +4,7 @@
 
 package maltese
 
+import maltese.passes.InliningPass
 import smt.TransitionSystem
 
 
@@ -22,7 +23,10 @@ object Maltese {
 
     println(s"Loaded $filename")
 
-    println(TransitionSystem.serialize(sys))
+    //println(TransitionSystem.serialize(sys))
+    val inlinedSys = InliningPass.run(sys)
+    println("After inlining")
+    println(TransitionSystem.serialize(inlinedSys))
 
 
     // build model checking context
