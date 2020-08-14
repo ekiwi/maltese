@@ -20,7 +20,8 @@ object InliningPass {
       val inlineExpr = inline.map(s => s.name -> s.e).toMap
       def replace(e: SMTExpr): SMTExpr = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(e)
       val remainingSignals = keep.map(s => s.copy(e = replace(s.e)))
-      sys.copy(signals = remainingSignals)
+      val states = sys.states.map(s => s.copy(init = s.init.map(replace), next = s.next.map(replace)))
+      sys.copy(signals = remainingSignals, states = states)
     }
   }
 
