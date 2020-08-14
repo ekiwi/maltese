@@ -23,8 +23,8 @@ object Maltese {
 
     println(s"Loaded $filename")
 
-    println(TransitionSystem.serialize(sys))
-    println()
+    //println(TransitionSystem.serialize(sys))
+    //println()
 
     val simplify0 = SimplifyPass.run(sys)
     println("After 1. Simplify")

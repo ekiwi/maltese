@@ -16,10 +16,17 @@ object InliningPass {
     if(doInline.isEmpty) {
       sys
     } else {
-      val (inline, keep) = sys.signals.partition(s => doInline.contains(s.name))
-      val inlineExpr = inline.map(s => s.name -> s.e).toMap
+      val inlineExpr = mutable.HashMap[String, SMTExpr]()
+      val remainingSignals = sys.signals.flatMap { signal =>
+        val inlinedE = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(signal.e)
+        if(doInline.contains(signal.name)) {
+          inlineExpr(signal.name) = inlinedE
+          None
+        } else {
+          Some(signal.copy(e = inlinedE))
+        }
+      }
       def replace(e: SMTExpr): SMTExpr = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(e)
-      val remainingSignals = keep.map(s => s.copy(e = replace(s.e)))
       val states = sys.states.map(s => s.copy(init = s.init.map(replace), next = s.next.map(replace)))
       sys.copy(signals = remainingSignals, states = states)
     }
