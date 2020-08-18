@@ -4,32 +4,39 @@
 
 package maltese.smt
 
+import java.io.File
+
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.matching.Regex
 
 object Btor2 {
-  def load(filename: String, inlineSignals: Boolean = false): TransitionSystem = {
-    val ff = Source.fromFile(filename)
-    val sys = Btor2Parser.read(ff.getLines(), inlineSignals)
+  def load(file: File): TransitionSystem = load(file, false)
+  def load(file: File, inlineSignals: Boolean): TransitionSystem = {
+    val ff = Source.fromFile(file)
+    val defaultName = file.getName.split('.').dropRight(1).mkString(".")
+    val sys = Btor2Parser.read(ff.getLines(), inlineSignals, defaultName)
     ff.close()
     sys
   }
+  def read(src: String, inlineSignals: Boolean = false, defaultName: String = "Unknown"): TransitionSystem = {
+    val lines = src.split('\n').iterator
+    Btor2Parser.read(lines, inlineSignals, defaultName)
+  }
 }
 
-object Btor2Parser {
+private object Btor2Parser {
   val unary = Set("not", "inc", "dec", "neg", "redand", "redor", "redxor")
   val binary = Set("iff", "implies", "sgt", "ugt", "sgte", "ugte", "slt", "ult", "slte", "ulte",
     "and", "nand", "nor", "or", "xnor", "xor", "rol", "ror", "sll", "sra", "srl", "add", "mul", "sdiv", "udiv", "smod",
     "srem", "urem", "sub", "saddo", "uaddo", "sdivo", "udivo", "smulo", "umulo", "ssubo", "usubo", "concat")
 
-  def read(lines: Iterator[String], inlineSignals: Boolean): TransitionSystem = {
+  def read(lines: Iterator[String], inlineSignals: Boolean, defaultName: String): TransitionSystem = {
     val bvSorts = new mutable.HashMap[Int,Int]()
     val arraySorts = new mutable.HashMap[Int,(Int,Int)]()
     val states = new mutable.HashMap[Int,State]()
     val inputs = new mutable.ArrayBuffer[BVSymbol]()
-    val signals = new mutable.HashMap[Int,SMTExpr]()
-    val labels = new mutable.ArrayBuffer[(Int, (SignalLabel, String))]()
+    val signals = new mutable.LinkedHashMap[Int,Signal]()
     val yosysLabels = new mutable.HashMap[Int,String]()
 
 
@@ -37,6 +44,11 @@ object Btor2Parser {
     val uniqueNames = new mutable.HashSet[String]()
     def isUnique(name: String): Boolean = !uniqueNames.contains(name)
     def nameFromPrefix(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next
+    def ensureUnique(name: String): String = {
+      val unique = (Iterator(name) ++ Iterator.from(0).map(i => name + "_" + i)).filter(isUnique).next
+      uniqueNames.add(unique)
+      unique
+    }
 
     // while not part of the btor2 spec, yosys annotates the system's name
     var name: Option[String] = None
@@ -81,14 +93,12 @@ object Btor2Parser {
       val id = Integer.parseInt(parts.head)
 
       // nodes besides output that feature nid
-      def expr(offset: Int): SMTExpr = {
+      def expr(offset: Int, preferredName: Option[String] = None): SMTExpr = {
         assert(parts.length > 3 + offset, s"parts(${3 + offset}) does not exist! ${parts.mkString(", ")}")
         val nid = Integer.parseInt(parts(3 + offset))
         assert(signals.contains(nid), s"Unknown node #$nid")
-        val e = signals(nid)
-        if(inlineSignals) { e } else {
-          SMTSymbol.fromExpr(s"s$nid", e)
-        }
+        val sig = signals(nid)
+        if(inlineSignals) { sig.e } else { sig.toSymbol }
       }
       def bvExpr(offset: Int) = expr(offset).asInstanceOf[BVExpr]
       def arrayExpr(offset: Int) = expr(offset).asInstanceOf[ArrayExpr]
@@ -122,40 +132,49 @@ object Btor2Parser {
           Some(a)
       }
 
+      def getLabelName(prefix: String): String =
+        ensureUnique(if(parts.length > 3) parts(3) else nameFromPrefix(prefix))
+
       def isArray: Boolean = arraySorts.contains(sortId)
 
       val cmd = parts(1)
+      var name: Option[String] = None
+      var label: SignalLabel = IsNode
       val new_expr = cmd  match {
         case "sort" => parseSort(id, parts) ; None
         case "input" =>
-          val name = if(parts.length > 3) parts(3) else nameFromPrefix("input")
-          assert(isUnique(name))
-          uniqueNames += name
-          val input = BVSymbol(name, width)
+          name = Some(getLabelName("input"))
+          val input = BVSymbol(name.get, width)
           inputs.append(input)
           Some(input)
         case lbl @ ("output" | "bad" | "constraint" | "fair") =>
-          val name = if(parts.length > 3) parts(3) else nameFromPrefix(lbl)
-          assert(isUnique(name))
-          uniqueNames += name
+          name = Some(getLabelName(lbl))
+          label = SignalLabel.stringToLabel(lbl)
           val nid = Integer.parseInt(parts(2))
-          labels.append((nid, (SignalLabel.stringToLabel(lbl), name)))
-          None
+          Some(signals(nid).toSymbol)
         case "state" =>
-          val name = if(parts.length > 3) parts(3) else nameFromPrefix("state")
-          assert(isUnique(name))
-          uniqueNames += name
-          val sym = if(isArray) ArraySymbol(name, indexWidth, dataWidth) else BVSymbol(name, width)
+          name = Some(getLabelName("state"))
+          val sym = if(isArray) ArraySymbol(name.get, indexWidth, dataWidth) else BVSymbol(name.get, width)
           states.put(id, State(sym, None, None))
           Some(sym)
         case "next" =>
-          val state_id = Integer.parseInt(parts(3))
-          states.put(state_id, states(state_id).copy(next=Some(expr(1))))
-          None
+          val stateId = Integer.parseInt(parts(3))
+          val state = states(stateId)
+          name = Some(ensureUnique(state.sym.name + ".next"))
+          label = IsNext
+          val nextExpr = expr(1)
+          val nextSymbol =  SMTSymbol.fromExpr(name.get, nextExpr)
+          states.put(stateId, state.copy(next=Some(nextSymbol)))
+          Some(nextExpr)
         case "init" =>
-          val state_id = Integer.parseInt(parts(3))
-          states.put(state_id, states(state_id).copy(init=Some(expr(1))))
-          None
+          val stateId = Integer.parseInt(parts(3))
+          val state = states(stateId)
+          name = Some(ensureUnique(state.sym.name + ".init"))
+          label = IsInit
+          val initExpr = expr(1)
+          val initSymbol =  SMTSymbol.fromExpr(name.get, initExpr)
+          states.put(stateId, state.copy(init=Some(initSymbol)))
+          Some(initExpr)
         case format @ ("const" | "constd" | "consth" | "zero" | "one") =>
           val value = if(format == "zero"){ BigInt(0)
           } else if (format == "one") { BigInt(1)
@@ -191,7 +210,9 @@ object Btor2Parser {
 
       }
       new_expr match {
-        case Some(expr) => signals.put(id, expr)
+        case Some(expr) =>
+          val n = name.getOrElse(ensureUnique("s" + id))
+          signals.put(id, Signal(n, expr, label))
         case _ =>
       }
     }
@@ -201,18 +222,15 @@ object Btor2Parser {
     //println(yosys_lables)
     // TODO: use yosys_lables to fill in missing symbol names
 
+    // we want to ignore state and input signals
+    val isInputOrState = (inputs.map(_.name) ++ states.values.map(_.sym.name)).toSet
 
-    // if we decide to inline, we only keep the signals that have labels (sort of the leaf nodes)
-    val keepSignals: Iterable[(Int, SMTExpr)] = if(inlineSignals) labels.map(l => l._1 -> signals(l._1)) else signals
-    val lblMap = labels.toMap
-    val tsSignals = keepSignals.map { case (i, expr) =>
-      lblMap.get(i) match {
-        case Some((lbl, name)) => Signal(name, expr, lbl)
-        case None => Signal("s" + i, expr)
-      }
-    }.toList
+    // if we are inlining, we are ignoring all node signals
+    val keep = if(inlineSignals) { s: Signal => s.lbl != IsNode && !isInputOrState(s.name) } else { s: Signal => !isInputOrState(s.name) }
+    val finalSignals = signals.values.filter(keep).toArray
 
-    TransitionSystem(name.getOrElse("Top"), inputs=inputs.toSeq, states=states.values.toSeq, signals = tsSignals)
+    val sysName = name.getOrElse(defaultName)
+    TransitionSystem(sysName, inputs=inputs.toSeq, states=states.values.toSeq, signals = finalSignals)
   }
 
   private def parseConst(format: String, str: String): BigInt = format match {

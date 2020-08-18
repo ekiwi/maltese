@@ -5,15 +5,19 @@
 package maltese.smt
 
 case class State(sym: SMTSymbol, init: Option[SMTExpr], next: Option[SMTExpr])
-case class Signal(name: String, e: SMTExpr, lbl: SignalLabel = IsNode)
-case class TransitionSystem(name: String, inputs: Seq[BVSymbol], states: Seq[State], signals: Seq[Signal])
+case class Signal(name: String, e: SMTExpr, lbl: SignalLabel = IsNode) {
+  def toSymbol: SMTSymbol = SMTSymbol.fromExpr(name, e)
+}
+case class TransitionSystem(name: String, inputs: Seq[BVSymbol], states: Seq[State], signals: Seq[Signal]) {
+  def serialize: String = TransitionSystem.serialize(this)
+}
 
 object TransitionSystem {
   def serialize(sys: TransitionSystem): String = {
     (Iterator(sys.name) ++
     sys.inputs.map(i => s"input ${i.name} : ${SMTExpr.serializeType(i)}") ++
     sys.signals.map(s => s"${SignalLabel.labelToString(s.lbl)} ${s.name} : ${SMTExpr.serializeType(s.e)} = ${s.e}") ++
-    sys.states.map(s => s"state ${s.sym} = [init] ${s.init} [next] ${s.next}")
+    sys.states.map(s => s"state ${s.sym.name} : ${SMTExpr.serializeType(s.sym)}\n  [init] ${s.init}\n  [next] ${s.next}")
       ).mkString("\n")
   }
 }
@@ -24,10 +28,12 @@ case object IsOutput extends SignalLabel
 case object IsConstraint extends SignalLabel
 case object IsBad extends SignalLabel
 case object IsFair extends SignalLabel
+case object IsNext extends SignalLabel
+case object IsInit extends SignalLabel
 
 object SignalLabel {
-  private val labels = Seq(IsNode, IsOutput, IsConstraint, IsBad, IsFair)
-  private val labelStrings = Seq("node", "output", "constraint", "bad", "fair")
+  private val labels = Seq(IsNode, IsOutput, IsConstraint, IsBad, IsFair, IsNext, IsInit)
+  private val labelStrings = Seq("node", "output", "constraint", "bad", "fair", "next", "init")
   val labelToString: SignalLabel => String = labels.zip(labelStrings).toMap
   val stringToLabel: String => SignalLabel = labelStrings.zip(labels).toMap
 }

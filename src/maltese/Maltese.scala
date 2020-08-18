@@ -4,6 +4,8 @@
 
 package maltese
 
+import java.io.File
+
 import maltese.passes.{InliningPass, SimplifyPass}
 import smt.TransitionSystem
 
@@ -19,7 +21,7 @@ object MalteseApp extends App {
 object Maltese {
   def load(filename: String): Unit = {
     // load transition system from file
-    val sys = smt.Btor2.load(filename)
+    val sys = smt.Btor2.load(new File(filename))
 
     println(s"Loaded $filename")
 

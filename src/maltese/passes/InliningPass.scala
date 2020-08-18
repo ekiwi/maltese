@@ -9,6 +9,7 @@ import maltese.smt._
 import scala.collection.mutable
 
 /** Inlines signals that are used only ones or that leaf expressions (symbols or constants) */
+// TODO: don't inline things into the state next and init functions, try to rename them to something sensible.
 object InliningPass {
 
   def run(sys: TransitionSystem): TransitionSystem = {
