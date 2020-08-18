@@ -26,6 +26,8 @@ jobs:
         path: ~/.sbt
         key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
 
+    - name: Compile
+      run: sbt compile
 
     - name: Test
       run: sbt test
