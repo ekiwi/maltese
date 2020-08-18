@@ -93,7 +93,7 @@ private object Btor2Parser {
       val id = Integer.parseInt(parts.head)
 
       // nodes besides output that feature nid
-      def expr(offset: Int, preferredName: Option[String] = None): SMTExpr = {
+      def expr(offset: Int): SMTExpr = {
         assert(parts.length > 3 + offset, s"parts(${3 + offset}) does not exist! ${parts.mkString(", ")}")
         val nid = Integer.parseInt(parts(3 + offset))
         assert(signals.contains(nid), s"Unknown node #$nid")
@@ -135,6 +135,8 @@ private object Btor2Parser {
       def getLabelName(prefix: String): String =
         ensureUnique(if(parts.length > 3) parts(3) else nameFromPrefix(prefix))
 
+      def toSymbolOrExpr(name: String, e: SMTExpr): SMTExpr = if(inlineSignals) e else SMTSymbol.fromExpr(name, e)
+
       def isArray: Boolean = arraySorts.contains(sortId)
 
       val cmd = parts(1)
@@ -150,8 +152,7 @@ private object Btor2Parser {
         case lbl @ ("output" | "bad" | "constraint" | "fair") =>
           name = Some(getLabelName(lbl))
           label = SignalLabel.stringToLabel(lbl)
-          val nid = Integer.parseInt(parts(2))
-          Some(signals(nid).toSymbol)
+          Some(expr(-1))
         case "state" =>
           name = Some(getLabelName("state"))
           val sym = if(isArray) ArraySymbol(name.get, indexWidth, dataWidth) else BVSymbol(name.get, width)
@@ -163,8 +164,7 @@ private object Btor2Parser {
           name = Some(ensureUnique(state.sym.name + ".next"))
           label = IsNext
           val nextExpr = expr(1)
-          val nextSymbol =  SMTSymbol.fromExpr(name.get, nextExpr)
-          states.put(stateId, state.copy(next=Some(nextSymbol)))
+          states.put(stateId, state.copy(next=Some(toSymbolOrExpr(name.get,  nextExpr))))
           Some(nextExpr)
         case "init" =>
           val stateId = Integer.parseInt(parts(3))
@@ -172,8 +172,7 @@ private object Btor2Parser {
           name = Some(ensureUnique(state.sym.name + ".init"))
           label = IsInit
           val initExpr = expr(1)
-          val initSymbol =  SMTSymbol.fromExpr(name.get, initExpr)
-          states.put(stateId, state.copy(init=Some(initSymbol)))
+          states.put(stateId, state.copy(init=Some(toSymbolOrExpr(name.get, initExpr))))
           Some(initExpr)
         case format @ ("const" | "constd" | "consth" | "zero" | "one") =>
           val value = if(format == "zero"){ BigInt(0)
@@ -226,7 +225,9 @@ private object Btor2Parser {
     val isInputOrState = (inputs.map(_.name) ++ states.values.map(_.sym.name)).toSet
 
     // if we are inlining, we are ignoring all node signals
-    val keep = if(inlineSignals) { s: Signal => s.lbl != IsNode && !isInputOrState(s.name) } else { s: Signal => !isInputOrState(s.name) }
+    val keep = if(inlineSignals) {
+      s: Signal => s.lbl != IsNode && s.lbl != IsNext && s.lbl != IsInit && !isInputOrState(s.name)
+    } else { s: Signal => !isInputOrState(s.name) }
     val finalSignals = signals.values.filter(keep).toArray
 
     val sysName = name.getOrElse(defaultName)

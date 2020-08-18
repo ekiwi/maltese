@@ -41,4 +41,16 @@ class Btor2ParserSpec extends AnyFlatSpec {
     val sys = Btor2.read(count2, inlineSignals = false, defaultName = "counter2").serialize
     assert(sys.trim == expected.trim)
   }
+
+  it should "parse count2 with inlining" in {
+    val expected =
+      """counter2
+        |bad _bad_0 : bv<1> = eq(_state_0, 3'b111)
+        |state _state_0 : bv<3>
+        |  [init] Some(3'b0)
+        |  [next] Some(add(_state_0, 3'b1))
+        |""".stripMargin
+    val sys = Btor2.read(count2, inlineSignals = true, defaultName = "counter2").serialize
+    assert(sys.trim == expected.trim)
+  }
 }
