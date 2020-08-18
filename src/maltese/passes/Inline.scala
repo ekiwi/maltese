@@ -25,7 +25,7 @@ object Inline extends Pass {
       val inlineExpr = mutable.HashMap[String, SMTExpr]()
       val signals = sys.signals.map { signal =>
         val inlinedE = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(signal.e)
-        inlineExpr(signal.name) = inlinedE
+        if(doInline.contains(signal.name)) { inlineExpr(signal.name) = inlinedE }
         signal.copy(e = inlinedE)
       }
       sys.copy(signals = signals)

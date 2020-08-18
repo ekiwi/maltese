@@ -18,7 +18,7 @@ abstract class PassSpec(pass: Pass) extends AnyFlatSpec{
 
   def check(src: String, expected: String): Unit = {
     val sys = compile(src)
-    val sysString = sys.serialize.split('\n').drop(1).mkString("\n")
-    assert(sysString == expected)
+    val sysString = sys.serialize.split('\n').drop(1).mkString("\n").trim
+    assert(sysString == expected.trim)
   }
 }
