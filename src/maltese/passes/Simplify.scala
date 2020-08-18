@@ -8,9 +8,10 @@ package maltese.passes
 import maltese.smt._
 
 /** simplifies signals where possible  */
-object SimplifyPass {
+object Simplify extends Pass {
+  override def name: String = "Simplify"
 
-  def run(sys: TransitionSystem): TransitionSystem = {
+  override def run(sys: TransitionSystem): TransitionSystem = {
     sys.copy(signals = sys.signals.map(simplify))
   }
 

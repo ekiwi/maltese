@@ -8,28 +8,27 @@ package maltese.passes
 import maltese.smt._
 import scala.collection.mutable
 
-/** Inlines signals that are used only ones or that leaf expressions (symbols or constants) */
-// TODO: don't inline things into the state next and init functions, try to rename them to something sensible.
-object InliningPass {
+/** Inlines signals:
+ * - if the signal is only used once
+ * - if it is a lead expression (symbol or constant)
+ * This pass does not remove any symbols.
+ * Use DeadCodeElimination to get rid of any unused signals after inlining.
+ */
+object Inline extends Pass {
+  override def name: String = "Inline"
 
-  def run(sys: TransitionSystem): TransitionSystem = {
+  override def run(sys: TransitionSystem): TransitionSystem = {
     val doInline = findSignalsToInline(sys)
     if(doInline.isEmpty) {
       sys
     } else {
       val inlineExpr = mutable.HashMap[String, SMTExpr]()
-      val remainingSignals = sys.signals.flatMap { signal =>
+      val signals = sys.signals.map { signal =>
         val inlinedE = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(signal.e)
-        if(doInline.contains(signal.name)) {
-          inlineExpr(signal.name) = inlinedE
-          None
-        } else {
-          Some(signal.copy(e = inlinedE))
-        }
+        inlineExpr(signal.name) = inlinedE
+        signal.copy(e = inlinedE)
       }
-      def replace(e: SMTExpr): SMTExpr = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(e)
-      val states = sys.states.map(s => s.copy(init = s.init.map(replace), next = s.next.map(replace)))
-      sys.copy(signals = remainingSignals, states = states)
+      sys.copy(signals = signals)
     }
   }
 
@@ -41,10 +40,8 @@ object InliningPass {
 
   private def findSignalsToInline(sys: TransitionSystem): Set[String] = {
     // count how often a symbol is used
-    val useCount = mutable.HashMap[String, Int]().withDefaultValue(0)
-    val exprs = sys.signals.map(_.e) ++ sys.states.flatMap(s => s.init ++ s.next)
-    exprs.foreach(e => SMTExprVisitor.foreach(countUses(useCount))(e))
-    val onlyUsedOnce = useCount.collect { case (name, count) if count <= 1 => name }.toSet
+    val useCount = Analysis.countUses(sys.signals)
+    val onlyUsedOnce = sys.signals.filter(s => useCount(s.name) <= 1).map(_.name).toSet
     // we also want to inline signals that are only aliases
     val leafSignals = sys.signals.filter(s => isLeafExpr(s.e)).map(_.name).toSet
     // only regular node signals can be inlined
@@ -60,12 +57,4 @@ object InliningPass {
     case _: ArrayConstant => true
     case _ => false
   }
-
-  private def countUses(useCount: mutable.Map[String, Int])(e: SMTExpr): Unit = e match {
-    case BVSymbol(name, _) => useCount(name) += 1
-    case ArraySymbol(name, _, _) => useCount(name) += 1
-    case _ =>
-  }
-
-
 }
