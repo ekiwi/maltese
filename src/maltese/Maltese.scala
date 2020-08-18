@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.passes.{DeadCodeElimination, Inline, Pass, Simplify}
+import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, Simplify}
 import smt.TransitionSystem
 
 
@@ -28,16 +28,9 @@ object Maltese {
     println(sys.serialize)
     println()
 
-    //val passes = Seq(SimplifyPass, InliningPass, SimplifyPass)
-    val passes: Iterable[Pass] = Seq(Simplify, Inline, DeadCodeElimination)
+    val passes: Iterable[Pass] = Seq(Simplify, Inline, DeadCodeElimination, Simplify)
 
-    passes.foldLeft(sys) { case (sys, pass) =>
-      val next = pass.run(sys)
-      println(s"After ${pass.name}:")
-      println(next.serialize)
-      println()
-      next
-    }
+    PassManager(passes).run(sys, trace = true)
 
     // build model checking context
 
