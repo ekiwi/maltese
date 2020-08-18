@@ -14,7 +14,7 @@ object SMTSymbol {
 }
 
 sealed trait BVExpr extends SMTExpr { def width: Int }
-case class BVLiteral(value: BigInt, width: Int) extends BVExpr {
+class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr { // not a case class to allow for custom unapply
   private def minWidth = value.bitLength + (if(value <= 0) 1 else 0)
   assert(width > 0, "Zero or negative width literals are not allowed!")
   assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
@@ -22,6 +22,14 @@ case class BVLiteral(value: BigInt, width: Int) extends BVExpr {
     width.toString + "'b" + value.toString(2)
   } else { width.toString + "'x" + value.toString(16) }
 }
+object BVLiteral {
+  def apply(value: BigInt, width: Int): BVLiteral = new BVLiteral(value, width)
+  // because BigInt has no unapply function, we can only pattern match literals with a value that fits into Long
+  def unapply(literal: BVLiteral): Option[(Long, Int)] = if(literal.value.isValidLong) {
+    Some((literal.value.toLong, literal.width))
+  } else { None }
+}
+
 case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
   assert(!name.contains("|"),  s"Invalid id $name contains escape character `|`")
   assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
