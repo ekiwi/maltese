@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, Simplify}
+import maltese.passes.{DeadCodeElimination, ExpandReductions, Inline, Pass, PassManager, Simplify}
 import smt.TransitionSystem
 
 
@@ -28,7 +28,7 @@ object Maltese {
     println(sys.serialize)
     println()
 
-    val passes: Iterable[Pass] = Seq(Simplify, Inline, DeadCodeElimination, Simplify)
+    val passes: Iterable[Pass] = Seq(Simplify, ExpandReductions, Inline, DeadCodeElimination, Simplify)
 
     PassManager(passes).run(sys, trace = true)
 
