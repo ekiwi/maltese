@@ -19,13 +19,11 @@ class PassManager private(val passes: Iterable[Pass]) {
       if(trace) {
         val didChange = sys.serialize != next.serialize
         if(didChange) {
-          println(s"After ${pass.name}:")
-          println("Signal Count: " + next.signals.size)
-          println(next.serialize)
+          println(s"- ${pass.name}:")
+          println("   - Signal Count: " + next.signals.size)
         } else {
-          println(s"After ${pass.name}: NO CHANGE")
+          println(s"- ${pass.name}: NO CHANGE")
         }
-        println()
       }
       next
     }

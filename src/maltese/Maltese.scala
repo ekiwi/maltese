@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.passes.{DeadCodeElimination, ExpandReductions, Inline, Pass, PassManager, Simplify}
+import maltese.passes._
 import smt.TransitionSystem
 
 
@@ -19,16 +19,21 @@ object MalteseApp extends App {
 }
 
 object Maltese {
+  private val passes: Iterable[Pass] = Seq(
+    PrintSystem,
+    Simplify,
+    ExpandReductions,
+    Inline,
+    DeadCodeElimination,
+    PrintSystem,
+    Simplify
+  )
+
   def load(filename: String): Unit = {
     // load transition system from file
     val sys = smt.Btor2.load(new File(filename))
 
     println(s"Loaded $filename")
-
-    println(sys.serialize)
-    println()
-
-    val passes: Iterable[Pass] = Seq(Simplify, ExpandReductions, Inline, DeadCodeElimination, Simplify)
 
     PassManager(passes).run(sys, trace = true)
 
