@@ -20,13 +20,18 @@ object MalteseApp extends App {
 
 object Maltese {
   private val passes: Iterable[Pass] = Seq(
-    PrintSystem,
     Simplify,
     ExpandReductions,
     Inline,
     DeadCodeElimination,
+
+    Simplify,
+    Inline,
+    DeadCodeElimination,
+
+    // TODO: debug why e.g. "ite(s583, _input_20, ite(1'b0, 2'b0, s578)" is not simplified (should be s578)
+    Simplify,
     PrintSystem,
-    Simplify
   )
 
   def load(filename: String): Unit = {
