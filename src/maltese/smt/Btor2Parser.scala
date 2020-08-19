@@ -53,7 +53,7 @@ private object Btor2Parser {
     // while not part of the btor2 spec, yosys annotates the system's name
     var name: Option[String] = None
 
-    def parseSort(id: Int, parts: Seq[String]): Unit = {
+    def parseSort(id: Int, parts: Array[String]): Unit = {
       lazy val i3 = Integer.parseInt(parts(3))
       lazy val i4 = Integer.parseInt(parts(4))
       if(parts(2) == "bitvec") {
@@ -228,10 +228,10 @@ private object Btor2Parser {
     val keep = if(inlineSignals) {
       s: Signal => s.lbl != IsNode && s.lbl != IsNext && s.lbl != IsInit && !isInputOrState(s.name)
     } else { s: Signal => !isInputOrState(s.name) }
-    val finalSignals = signals.values.filter(keep).toArray
+    val finalSignals = signals.values.filter(keep).toList
 
     val sysName = name.getOrElse(defaultName)
-    TransitionSystem(sysName, inputs=inputs.toSeq, states=states.values.toSeq, signals = finalSignals)
+    TransitionSystem(sysName, inputs=inputs.toList, states=states.values.toList, signals = finalSignals)
   }
 
   private def parseConst(format: String, str: String): BigInt = format match {
