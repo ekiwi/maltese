@@ -24,7 +24,7 @@ object Inline extends Pass {
     } else {
       val inlineExpr = mutable.HashMap[String, SMTExpr]()
       val signals = sys.signals.map { signal =>
-        val inlinedE = SMTExprVisitor.map(replaceSymbols(inlineExpr.get)(_))(signal.e)
+        val inlinedE = replaceSymbols(signal.e)(inlineExpr.get)
         if(doInline.contains(signal.name)) { inlineExpr(signal.name) = inlinedE }
         signal.copy(e = inlinedE)
       }
@@ -32,10 +32,10 @@ object Inline extends Pass {
     }
   }
 
-  private def replaceSymbols(m: String => Option[SMTExpr])(e: SMTExpr): SMTExpr = e match {
+  private def replaceSymbols(e: SMTExpr)(implicit m: String => Option[SMTExpr]): SMTExpr = e match {
     case s @ BVSymbol(name, _) => m(name).getOrElse(s)
     case s @ ArraySymbol(name, _, _) => m(name).getOrElse(s)
-    case other => other
+    case other => other.mapExpr(replaceSymbols)
   }
 
   private def findSignalsToInline(sys: TransitionSystem): Set[String] = {

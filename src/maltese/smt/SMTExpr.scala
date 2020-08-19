@@ -4,7 +4,11 @@
 
 package maltese.smt
 
-sealed trait SMTExpr { def children: List[SMTExpr] }
+sealed trait SMTExpr {
+  def children: List[SMTExpr]
+  def foreachExpr(f: SMTExpr => Unit): Unit = children.foreach(f)
+  def mapExpr(f: SMTExpr => SMTExpr): SMTExpr = SMTExprMap.mapExpr(this, f)
+}
 sealed trait SMTSymbol extends SMTExpr with SMTNullaryExpr {
   val name: String
   def toStringWithType: String

@@ -7,9 +7,7 @@ package maltese.smt
 object SMTSimplifier {
 
   /** Recursively simplifies expressions from bottom to top. */
-  def simplify(expr: SMTExpr): SMTExpr = SMTExprVisitor.map(simplifySingle)(expr)
-
-  private def simplifySingle(expr: SMTExpr): SMTExpr = expr match {
+  def simplify(expr: SMTExpr): SMTExpr = expr.mapExpr(simplify) match {
     case op: BVOp => simplifyOp(op)
     case BVExtend(e, 0, _) => e
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
