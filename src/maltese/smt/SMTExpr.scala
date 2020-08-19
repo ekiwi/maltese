@@ -27,17 +27,10 @@ sealed trait BVExpr extends SMTExpr {
   def width: Int
   override def toString: String = SMTExprSerializer.serialize(this)
 }
-class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr with SMTNullaryExpr { // not a case class to allow for custom unapply
+case class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr with SMTNullaryExpr {
   private def minWidth = value.bitLength + (if(value <= 0) 1 else 0)
   assert(width > 0, "Zero or negative width literals are not allowed!")
   assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
-}
-object BVLiteral {
-  def apply(value: BigInt, width: Int): BVLiteral = new BVLiteral(value, width)
-  // because BigInt has no unapply function, we can only pattern match literals with a value that fits into Long
-  def unapply(literal: BVLiteral): Option[(Long, Int)] = if(literal.value.isValidLong) {
-    Some((literal.value.toLong, literal.width))
-  } else { None }
 }
 
 case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
