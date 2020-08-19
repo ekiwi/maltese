@@ -23,7 +23,17 @@ object SMTSimplifier {
     case (True(), a) => a
     case (a, False()) => not(a)
     case (False(), a) => not(a)
+    case (BVConcat(msb, lsb), other) => splitBVEqual(msb, lsb, other)
+    case (other, BVConcat(msb, lsb)) => splitBVEqual(msb, lsb, other)
     case (_, _) => expr
+  }
+
+  private def splitBVEqual(msb: BVExpr, lsb: BVExpr, other: BVExpr): BVExpr = {
+    // adding a slice to the other value can enable simplifications
+    val otherLsb = BVSlice(other, lsb.width - 1, 0)
+    val otherMsb = BVSlice(other, other.width - 1, lsb.width)
+    // the new sub equalities could also have simplification opportunities, e.g., because of nested Concat
+    simplify(and(BVEqual(msb, otherMsb), BVEqual(lsb, otherLsb))).asInstanceOf[BVExpr]
   }
 
   private def simplifyBVIte(i: BVIte): BVExpr = (i.cond, i.tru, i.fals) match {
@@ -65,8 +75,6 @@ object SMTSimplifier {
     case other => other
   }
 
-  // we try to "push" slice expressions as far down as possible
-  // e.g. concat(1'b1, 1'b0)[0] => 1'b0
   private def simplifySlice(expr: BVSlice): BVExpr = expr match {
     // no-op
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
@@ -85,6 +93,8 @@ object SMTSimplifier {
     BVSlice(expr, hi=combinedHi, lo=combinedLo)
   }
 
+  // we try to "push" slice expressions as far down as possible
+  // e.g. concat(1'b1, 1'b0)[0] => 1'b0
   private def pushDownSlice(msb: BVExpr, lsb: BVExpr, hi: Int, lo: Int): BVExpr = {
     if(lsb.width > hi) { BVSlice(lsb, hi, lo)
     } else if(lo >= lsb.width) { BVSlice(msb, hi - lsb.width, lo - lsb.width)

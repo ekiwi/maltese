@@ -71,6 +71,17 @@ class SMTSimplifierSpec extends SMTSimplifierBaseSpec {
     assert(simplify(BVIte(fals, c, b)) == b)
     assert(simplify(BVIte(b, c, c)) == c)
   }
+
+  it should "simplify comparison to concat(..., ...)" in {
+    val (a, b, c) = (bv("a", 2), bv("b", 3), bv("c", 5))
+
+    assert(simplify(BVEqual(c, BVConcat(a, b))).toString == "and(eq(a, c[4:3]), eq(b, c[2:0]))")
+    assert(simplify(BVEqual(BVConcat(a, b), c)).toString == "and(eq(a, c[4:3]), eq(b, c[2:0]))")
+
+    val (a0, a1) = (bv("a0", 1), bv("a1", 1))
+    assert(simplify(BVEqual(c, BVConcat(BVConcat(a1, a0), b))).toString ==
+      "and(and(eq(a1, c[4]), eq(a0, c[3])), eq(b, c[2:0]))")
+  }
 }
 
 abstract class SMTSimplifierBaseSpec extends AnyFlatSpec {
