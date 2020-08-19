@@ -7,8 +7,6 @@ package maltese
 import java.io.File
 
 import maltese.passes._
-import smt.TransitionSystem
-
 
 object MalteseApp extends App {
   if(args.length < 1) {

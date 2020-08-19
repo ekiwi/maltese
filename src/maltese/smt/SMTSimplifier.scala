@@ -73,6 +73,8 @@ object SMTSimplifier {
     // slice of slice
     case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(e, innerLo, hi=hi, lo=lo)
     // slice of concat (this can enable new simplifications)
+    // TODO: we can probably make this a bit more performant by only performing top-down instead of bottom up
+    //       simplifications since the leaves are already simplified.
     case BVSlice(BVConcat(msb, lsb), hi, lo) => simplify(pushDownSlice(msb, lsb, hi, lo)).asInstanceOf[BVExpr]
     case other => other
   }
