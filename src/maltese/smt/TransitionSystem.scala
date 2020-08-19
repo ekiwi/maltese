@@ -8,7 +8,7 @@ case class State(sym: SMTSymbol, init: Option[SMTExpr], next: Option[SMTExpr])
 case class Signal(name: String, e: SMTExpr, lbl: SignalLabel = IsNode) {
   def toSymbol: SMTSymbol = SMTSymbol.fromExpr(name, e)
 }
-case class TransitionSystem(name: String, inputs: Seq[BVSymbol], states: Seq[State], signals: Seq[Signal]) {
+case class TransitionSystem(name: String, inputs: List[BVSymbol], states: List[State], signals: List[Signal]) {
   def serialize: String = TransitionSystem.serialize(this)
 }
 
