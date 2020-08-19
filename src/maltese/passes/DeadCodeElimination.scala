@@ -13,7 +13,15 @@ object DeadCodeElimination extends Pass {
 
   override def run(sys: TransitionSystem): TransitionSystem = {
     val useCount = Analysis.countUses(sys.signals)
-    val signals = sys.signals.filterNot(s => useCount(s.name) == 0 && s.lbl == IsNode)
-    sys.copy(signals = signals)
+    val eliminatedStates = sys.states.map(_.sym.name).filter(n => useCount(n) == 0).toSet
+    val signals = sys.signals.filterNot { s => s.lbl match {
+      case IsNode => useCount(s.name) == 0
+      case IsNext | IsInit =>
+        val state = s.name.split('.').dropRight(1).mkString(".")
+        eliminatedStates.contains(state)
+      case _ => false
+    }}
+    val states = sys.states.filterNot(s => eliminatedStates.contains(s.sym.name))
+    sys.copy(signals = signals, states = states)
   }
 }
