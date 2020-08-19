@@ -81,4 +81,11 @@ class SMTSimplifierSpec extends AnyFlatSpec {
     assert(simplify(BVIte(b, c, c)) == c)
   }
 
+  private def bv(name: String, width: Int = 4): BVSymbol = BVSymbol(name, width)
+
+  it should "simplify slice no-op" in {
+    assert(simplify(BVSlice(bv("a", 3), 2, 0))   == bv("a", 3))
+    assert(simplify(BVSlice(bv("a", 13), 12, 0)) == bv("a", 13))
+  }
+
 }
