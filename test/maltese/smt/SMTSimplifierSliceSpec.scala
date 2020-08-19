@@ -30,7 +30,7 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
     val word = BVConcat(BVLiteral(3, 3), bv("a", 2))
     assert(word.toString == "concat(3'b11, a)")
     assert(simplify(BVSlice(word, 4, 2)).toString == "3'b11")
-    assert(simplify(BVSlice(word, 4, 3)).toString == "3'b11[2:1]")
+    assert(simplify(BVSlice(word, 4, 3)).toString == "2'b1")
     assert(simplify(BVSlice(word, 1, 0)).toString== "a")
     assert(simplify(BVSlice(word, 1, 1)).toString == "a[1]")
   }
@@ -39,7 +39,7 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
     val word = BVConcat(BVLiteral(3, 3), bv("a", 2))
     assert(simplify(BVSlice(word, 4, 0)).toString == "concat(3'b11, a)")
     assert(simplify(BVSlice(word, 4, 1)).toString == "concat(3'b11, a[1])")
-    assert(simplify(BVSlice(word, 3, 0)).toString == "concat(3'b11[1:0], a)")
+    assert(simplify(BVSlice(word, 3, 0)).toString == "concat(2'b11, a)")
   }
 
   it should "simplify non-overlapping slice of concat(a : BV<2>, 3'b11, b : bv<2>)" in {
