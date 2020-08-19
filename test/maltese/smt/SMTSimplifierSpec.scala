@@ -62,6 +62,12 @@ class SMTSimplifierSpec extends AnyFlatSpec {
     assert(simplify(or(not(b), not(b))) == not(b))
   }
 
+  it should "simplify equality for booleans" in {
+    // this used to trigger a bug in the Firrtl specific simplification passes
+    assert(simplify(BVEqual(b, tru)) == b)
+    assert(simplify(BVEqual(b, fals)) == not(b))
+  }
+  
   it should "simplify negations" in {
     assert(simplify(not(b)) == not(b))
     assert(simplify(not(not(b))) == b)

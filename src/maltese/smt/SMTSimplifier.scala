@@ -9,11 +9,21 @@ object SMTSimplifier {
   /** Recursively simplifies expressions from bottom to top. */
   def simplify(expr: SMTExpr): SMTExpr = expr.mapExpr(simplify) match {
     case op: BVOp => simplifyOp(op)
+    case eq: BVEqual => simplifyBVEqual(eq)
     case BVExtend(e, 0, _) => e
     case slice: BVSlice => simplifySlice(slice)
     case BVNot(BVNot(e)) => e
     case ite: BVIte => simplifyBVIte(ite)
     case other => other
+  }
+
+  private def simplifyBVEqual(expr: BVEqual): BVExpr = (expr.a, expr.b) match {
+    case (a, b) if a == b => True()
+    case (a, True()) => a
+    case (True(), a) => a
+    case (a, False()) => not(a)
+    case (False(), a) => not(a)
+    case (_, _) => expr
   }
 
   private def simplifyBVIte(i: BVIte): BVExpr = (i.cond, i.tru, i.fals) match {
@@ -68,7 +78,15 @@ object SMTSimplifier {
   private def not(a: BVExpr): BVNot = BVNot(a)
 
   // unapply for matching BVLiteral(1, 1)
-  private object True  { def unapply(l: BVLiteral): Boolean = l.value == 1 && l.width == 1 }
+  private object True  {
+    private val _True = BVLiteral(1, 1)
+    def apply(): BVLiteral = _True
+    def unapply(l: BVLiteral): Boolean = l.value == 1 && l.width == 1
+  }
   // unapply for matching BVLiteral(0, 1)
-  private object False { def unapply(l: BVLiteral): Boolean = l.value == 0 && l.width == 1  }
+  private object False {
+    private val _False = BVLiteral(0, 1)
+    def apply(): BVLiteral = _False
+    def unapply(l: BVLiteral): Boolean = l.value == 0 && l.width == 1
+  }
 }
