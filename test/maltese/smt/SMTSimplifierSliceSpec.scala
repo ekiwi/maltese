@@ -21,4 +21,50 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
     assert(simplify(BVSlice(BVSlice(BVSlice(bv("a", 5), 4,1), 3, 1), 2, 2)) ==
       BVSlice(bv("a", 5), 4,4))
   }
+
+  it should "simplify non-overlapping slice of concat(3'b11, a : bv<2>)" in {
+    val word = BVConcat(BVLiteral(3, 3), bv("a", 2))
+    assert(word.toString == "concat(3'b11, a)")
+    assert(simplify(BVSlice(word, 4, 2)).toString == "3'b11")
+    assert(simplify(BVSlice(word, 4, 3)).toString == "3'b11[2:1]")
+    assert(simplify(BVSlice(word, 1, 0)).toString== "a")
+    assert(simplify(BVSlice(word, 1, 1)).toString == "a[1]")
+  }
+
+  it should "simplify overlapping slice of concat(3'b11, a : bv<2>)" in {
+    val word = BVConcat(BVLiteral(3, 3), bv("a", 2))
+    assert(simplify(BVSlice(word, 4, 0)).toString == "concat(3'b11, a)")
+    assert(simplify(BVSlice(word, 4, 1)).toString == "concat(3'b11, a[1])")
+    assert(simplify(BVSlice(word, 3, 0)).toString == "concat(3'b11[1:0], a)")
+  }
+
+  it should "simplify non-overlapping slice of concat(a : BV<2>, 3'b11, b : bv<2>)" in {
+    // There are two different ways to nest the concat of three values. Both should be simplified.
+    val longLeft = BVConcat(BVConcat(bv("a", 2), BVLiteral(3, 3)), bv("b", 2))
+    val longRight = BVConcat(bv("a", 2), BVConcat(BVLiteral(3, 3), bv("b", 2)))
+
+    assert(simplify(BVSlice(longLeft,  6, 5)).toString == "a")
+    assert(simplify(BVSlice(longRight, 6, 5)).toString == "a")
+
+    assert(simplify(BVSlice(longLeft,  4, 2)).toString == "3'b11")
+    assert(simplify(BVSlice(longRight, 4, 2)).toString == "3'b11")
+
+    assert(simplify(BVSlice(longLeft,  1, 0)).toString == "b")
+    assert(simplify(BVSlice(longRight, 1, 0)).toString == "b")
+  }
+
+  it should "simplify overlapping slice of concat(a : BV<2>, 3'b11, b : bv<2>)" in {
+    // There are two different ways to nest the concat of three values. Both should be simplified.
+    val longLeft = BVConcat(BVConcat(bv("a", 2), BVLiteral(3, 3)), bv("b", 2))
+    val longRight = BVConcat(bv("a", 2), BVConcat(BVLiteral(3, 3), bv("b", 2)))
+
+    assert(simplify(BVSlice(longLeft,  6, 2)).toString == "concat(a, 3'b11)")
+    assert(simplify(BVSlice(longRight, 6, 2)).toString == "concat(a, 3'b11)")
+
+    assert(simplify(BVSlice(longLeft,  6, 3)) == simplify(BVConcat(bv("a", 2), BVSlice(BVLiteral(3, 3), 2, 1))))
+    assert(simplify(BVSlice(longRight, 6, 3)) == simplify(BVConcat(bv("a", 2), BVSlice(BVLiteral(3, 3), 2, 1))))
+
+    assert(simplify(BVSlice(longLeft,  5, 2)).toString == "concat(a[0], 3'b11)")
+    assert(simplify(BVSlice(longRight, 5, 2)).toString == "concat(a[0], 3'b11)")
+  }
 }

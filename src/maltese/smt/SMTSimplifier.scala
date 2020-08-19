@@ -71,14 +71,27 @@ object SMTSimplifier {
     // no-op
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     // slice of slice
-    case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(hi, lo, innerLo, e)
+    case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(e, innerLo, hi=hi, lo=lo)
+    // slice of concat (this can enable new simplifications)
+    case BVSlice(BVConcat(msb, lsb), hi, lo) => simplify(pushDownSlice(msb, lsb, hi, lo)).asInstanceOf[BVExpr]
     case other => other
   }
 
-  private def combineSlice(hi: Int, lo: Int, innerLo: Int, expr: BVExpr): BVSlice = {
+  private def combineSlice(expr: BVExpr, innerLo: Int, hi: Int, lo: Int): BVSlice = {
     val combinedLo = lo + innerLo
     val combinedHi = hi + innerLo
     BVSlice(expr, hi=combinedHi, lo=combinedLo)
+  }
+
+  private def pushDownSlice(msb: BVExpr, lsb: BVExpr, hi: Int, lo: Int): BVExpr = {
+    if(lsb.width > hi) { BVSlice(lsb, hi, lo)
+    } else if(lo >= lsb.width) { BVSlice(msb, hi - lsb.width, lo - lsb.width)
+    } else {
+      BVConcat(
+        BVSlice(msb, hi - lsb.width, 0),
+        BVSlice(lsb, lsb.width - 1, lo)
+      )
+    }
   }
 
   private def and(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)
