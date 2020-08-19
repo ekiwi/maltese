@@ -62,5 +62,11 @@ class SMTSimplifierSpec extends AnyFlatSpec {
     assert(simplify(or(not(b), not(b))) == not(b))
   }
 
+  it should "simplify negations" in {
+    assert(simplify(not(b)) == not(b))
+    assert(simplify(not(not(b))) == b)
+    assert(simplify(not(not(not(b)))) == not(b))
+    assert(simplify(not(not(not(not(b))))) == b)
+  }
 
 }
