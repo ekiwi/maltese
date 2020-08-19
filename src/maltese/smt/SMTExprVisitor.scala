@@ -20,7 +20,6 @@ object SMTExprVisitor {
     // nullary
     case old : BVLiteral => bv(old)
     case old : BVSymbol => bv(old)
-    case old : BVRawExpr => bv(old)
     // unary
     case old @ BVExtend(e, by, signed) => val n = map(e, bv, ar) ; bv(if(n.eq(e)) old else BVExtend(n, by, signed))
     case old @ BVSlice(e, hi, lo) => val n = map(e, bv, ar) ; bv(if(n.eq(e)) old else BVSlice(n, hi, lo))
@@ -59,7 +58,6 @@ object SMTExprVisitor {
 
 
   private def map(e: ArrayExpr, bv: BVFun, ar: ArrayFun): ArrayExpr = e match {
-    case old : ArrayRawExpr => ar(old)
     case old : ArraySymbol => ar(old)
     case old @ ArrayConstant(e, indexWidth) =>
       val n = map(e, bv, ar) ; ar(if(n.eq(e)) old else ArrayConstant(n, indexWidth))

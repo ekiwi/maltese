@@ -10,7 +10,7 @@ object SMTSimplifier {
   def simplify(expr: SMTExpr): SMTExpr = SMTExprVisitor.map(simplifySingle)(expr)
 
   private def simplifySingle(expr: SMTExpr): SMTExpr = expr match {
-    case e: BVOp => simplifyOp(e)
+    case op: BVOp => simplifyOp(op)
     // TODO: maybe generalize by changing BVReduceAnd(x) => x == 1111 => split up concat
     case BVReduceAnd(BVConcat(a, b)) if a.width == 1 && b.width == 1 => BVOp(Op.And, a, b)
     case BVReduceOr(BVConcat(a, b)) if a.width == 1 && b.width == 1 => BVOp(Op.Or, a, b)
@@ -18,7 +18,6 @@ object SMTSimplifier {
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     case BVNot(BVNot(e)) => e
     case ite: BVIte => simplifyBVIte(ite)
-    case op: BVOp => simplifyOp(op)
     case other => other
   }
 

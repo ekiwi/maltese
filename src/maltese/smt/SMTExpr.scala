@@ -4,17 +4,20 @@
 
 package maltese.smt
 
-sealed trait SMTExpr
-sealed trait SMTSymbol extends SMTExpr { val name: String }
+sealed trait SMTExpr { def children: List[SMTExpr] }
+sealed trait SMTSymbol extends SMTExpr with SMTNullaryExpr { val name: String }
 object SMTSymbol {
   def fromExpr(name: String, e: SMTExpr): SMTSymbol = e match {
     case b: BVExpr => BVSymbol(name, b.width)
     case a: ArrayExpr => ArraySymbol(name, a.indexWidth, a.dataWidth)
   }
 }
+sealed trait SMTNullaryExpr extends SMTExpr {
+  override def children: List[SMTExpr] = List()
+}
 
 sealed trait BVExpr extends SMTExpr { def width: Int }
-class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr { // not a case class to allow for custom unapply
+class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr with SMTNullaryExpr { // not a case class to allow for custom unapply
   private def minWidth = value.bitLength + (if(value <= 0) 1 else 0)
   assert(width > 0, "Zero or negative width literals are not allowed!")
   assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
@@ -31,14 +34,17 @@ object BVLiteral {
 }
 
 case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
-  assert(!name.contains("|"),  s"Invalid id $name contains escape character `|`")
+  assert(!name.contains("|"), s"Invalid id $name contains escape character `|`")
   assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
   assert(width > 0, "Zero width bit vectors are not supported!")
   override def toString: String = name
-  def toStringWithType: String = name + " : bv" + width.toString
+  def toStringWithType: String = name + " : " + SMTExpr.serializeType(this)
 }
 
-sealed trait BVUnaryExpr extends BVExpr { def e: BVExpr }
+sealed trait BVUnaryExpr extends BVExpr {
+  def e: BVExpr
+  override def children: List[BVExpr] = List(e)
+}
 case class BVExtend(e: BVExpr, by: Int, signed: Boolean) extends BVUnaryExpr {
   assert(by >= 0, "Extension must be non-negative!")
   override val width: Int = e.width + by
@@ -76,6 +82,7 @@ case class BVReduceXor(e: BVExpr) extends BVUnaryExpr {
 sealed trait BVBinaryExpr extends BVExpr {
   def a: BVExpr
   def b: BVExpr
+  override def children: List[BVExpr] = List(a, b)
 }
 case class BVImplies(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == 1 && b.width == 1, s"Both arguments need to be 1-bit!")
@@ -126,13 +133,15 @@ case class BVConcat(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
 case class ArrayRead(array: ArrayExpr, index: BVExpr) extends BVExpr {
   assert(array.indexWidth == index.width, "Index with does not match expected array index width!")
   override val width: Int = array.dataWidth
-  override def toString: String = s"$array[$index])"
+  override def toString: String = s"$array[$index]"
+  override def children: List[SMTExpr] = List(array, index)
 }
 case class BVIte(cond: BVExpr, tru: BVExpr, fals: BVExpr) extends BVExpr {
   assert(cond.width == 1, s"Condition needs to be a 1-bit value not ${cond.width}-bit!")
   assert(tru.width == fals.width, s"Both branches need to be of the same width! ${tru.width} vs ${fals.width}")
   override val width: Int = tru.width
   override def toString: String = s"ite($cond, $tru, $fals)"
+  override def children: List[BVExpr] = List(cond, tru, fals)
 }
 
 sealed trait ArrayExpr extends SMTExpr { val indexWidth: Int; val dataWidth: Int }
@@ -147,7 +156,8 @@ case class ArrayStore(array: ArrayExpr, index: BVExpr, data: BVExpr) extends Arr
   assert(array.dataWidth == data.width, "Data with does not match expected array data width!")
   override val dataWidth: Int = array.dataWidth
   override val indexWidth: Int = array.indexWidth
-  override def toString: String = s"$array[$index := $data])"
+  override def toString:   String = s"$array[$index := $data]"
+  override def children:   List[SMTExpr] = List(array, index, data)
 }
 case class ArrayIte(cond: BVExpr, tru: ArrayExpr, fals: ArrayExpr) extends ArrayExpr {
   assert(cond.width == 1, s"Condition needs to be a 1-bit value not ${cond.width}-bit!")
@@ -158,16 +168,19 @@ case class ArrayIte(cond: BVExpr, tru: ArrayExpr, fals: ArrayExpr) extends Array
   override val dataWidth: Int = tru.dataWidth
   override val indexWidth: Int = tru.indexWidth
   override def toString: String = s"ite($cond, $tru, $fals)"
+  override def children:   List[SMTExpr] = List(cond, tru, fals)
 }
 case class ArrayEqual(a: ArrayExpr, b: ArrayExpr) extends BVExpr {
   assert(a.indexWidth == b.indexWidth, s"Both argument need to be the same index width!")
   assert(a.dataWidth == b.dataWidth, s"Both argument need to be the same data width!")
   override def width: Int = 1
   override def toString: String = s"eq($a, $b)"
+  override def children: List[SMTExpr] = List(a, b)
 }
 case class ArrayConstant(e: BVExpr, indexWidth: Int) extends ArrayExpr {
   override val dataWidth: Int = e.width
   override def toString: String = s"([$e] x ${ (BigInt(1) << indexWidth) - 1 })"
+  override def children:  List[SMTExpr] = List(e)
 }
 
 object SMTEqual {
@@ -192,7 +205,3 @@ object SMTExpr {
     case a: ArrayExpr => s"bv<${a.indexWidth}> -> bv<${a.dataWidth}>"
   }
 }
-
-// Raw SMTLib encoded expressions as an escape hatch used in the [[SMTTransitionSystemEncoder]]
-private case class BVRawExpr(serialized: String, width: Int) extends BVExpr
-private case class ArrayRawExpr(serialized: String, indexWidth: Int, dataWidth: Int) extends ArrayExpr
