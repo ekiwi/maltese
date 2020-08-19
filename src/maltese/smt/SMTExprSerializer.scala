@@ -22,7 +22,6 @@ object SMTExprSerializer {
     case BVNot(e) => s"not(${serialize(e)})"
     case BVNegate(e) => s"neg(${serialize(e)})"
     // binary
-    case BVImplies(a, b) => s"impl(${serialize(a)}, ${serialize(b)})"
     case BVEqual(a, b) => s"eq(${serialize(a)}, ${serialize(b)})"
     case BVComparison(Compare.Greater, a, b, false) => s"ugt(${serialize(a)}, ${serialize(b)})"
     case BVComparison(Compare.Greater, a, b, true) => s"sgt(${serialize(a)}, ${serialize(b)})"

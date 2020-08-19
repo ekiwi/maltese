@@ -70,10 +70,6 @@ sealed trait BVBinaryExpr extends BVExpr {
   def b: BVExpr
   override def children: List[BVExpr] = List(a, b)
 }
-case class BVImplies(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
-  assert(a.width == 1 && b.width == 1, s"Both arguments need to be 1-bit!")
-  override def width: Int = 1
-}
 case class BVEqual(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1

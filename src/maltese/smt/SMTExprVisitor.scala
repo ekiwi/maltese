@@ -26,9 +26,6 @@ object SMTExprVisitor {
     case old @ BVNot(e) => val n = map(e, bv, ar) ; bv(if(n.eq(e)) old else BVNot(n))
     case old @ BVNegate(e) => val n = map(e, bv, ar) ; bv(if(n.eq(e)) old else BVNegate(n))
     // binary
-    case old @ BVImplies(a, b) =>
-      val (nA, nB) = (map(a, bv, ar), map(b, bv, ar))
-      bv(if(nA.eq(a) && nB.eq(b)) old else BVImplies(nA, nB))
     case old @ BVEqual(a, b) =>
       val (nA, nB) = (map(a, bv, ar), map(b, bv, ar))
       bv(if(nA.eq(a) && nB.eq(b)) old else BVEqual(nA, nB))
