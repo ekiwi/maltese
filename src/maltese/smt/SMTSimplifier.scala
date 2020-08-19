@@ -11,9 +11,6 @@ object SMTSimplifier {
 
   private def simplifySingle(expr: SMTExpr): SMTExpr = expr match {
     case op: BVOp => simplifyOp(op)
-    // TODO: maybe generalize by changing BVReduceAnd(x) => x == 1111 => split up concat
-    case BVReduceAnd(BVConcat(a, b)) if a.width == 1 && b.width == 1 => BVOp(Op.And, a, b)
-    case BVReduceOr(BVConcat(a, b)) if a.width == 1 && b.width == 1 => BVOp(Op.Or, a, b)
     case BVExtend(e, 0, _) => e
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     case BVNot(BVNot(e)) => e

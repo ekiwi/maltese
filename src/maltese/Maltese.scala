@@ -21,7 +21,6 @@ object MalteseApp extends App {
 object Maltese {
   private val passes: Iterable[Pass] = Seq(
     Simplify,
-    ExpandReductions,
     Inline,
     DeadCodeElimination,
 

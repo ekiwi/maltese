@@ -245,9 +245,9 @@ private object Btor2Parser {
     case "inc" => BVOp(Op.Add, expr, BVLiteral(1, expr.width))
     case "dec" => BVOp(Op.Sub, expr, BVLiteral(1, expr.width))
     case "neg" => BVNegate(expr)
-    case "redand" => BVReduceAnd(expr)
-    case "redor" => BVReduceOr(expr)
-    case "redxor" => BVReduceXor(expr)
+    case "redand" => Reduce.and(expr)
+    case "redor" => Reduce.or(expr)
+    case "redxor" => Reduce.xor(expr)
     case other => throw new RuntimeException(s"Unknown unary op $other")
   }
 

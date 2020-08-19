@@ -66,18 +66,6 @@ case class BVNegate(e: BVExpr) extends BVUnaryExpr {
   override val width: Int = e.width
   override def toString: String = s"neg($e)"
 }
-case class BVReduceOr(e: BVExpr) extends BVUnaryExpr {
-  override def width: Int = 1
-  override def toString: String = s"redor($e)"
-}
-case class BVReduceAnd(e: BVExpr) extends BVUnaryExpr {
-  override def width: Int = 1
-  override def toString: String = s"redand($e)"
-}
-case class BVReduceXor(e: BVExpr) extends BVUnaryExpr {
-  override def width: Int = 1
-  override def toString: String = s"redxor($e)"
-}
 
 sealed trait BVBinaryExpr extends BVExpr {
   def a: BVExpr
