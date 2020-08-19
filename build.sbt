@@ -10,7 +10,7 @@ scalacOptions ++= Seq(
 )
 
 // scalatest has the best IntelliJ support
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.1" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.1" % "test"
 
 scalaSource in Compile := baseDirectory.value / "src"
 scalaSource in Test := baseDirectory.value / "test"
