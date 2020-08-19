@@ -22,6 +22,10 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
       BVSlice(bv("a", 5), 4,4))
   }
 
+  it should "simplify slice on a literal" in {
+    assert(simplify(BVSlice(BVLiteral(3, 32), 31, 1)) == BVLiteral(1, 31))
+  }
+
   it should "simplify non-overlapping slice of concat(3'b11, a : bv<2>)" in {
     val word = BVConcat(BVLiteral(3, 3), bv("a", 2))
     assert(word.toString == "concat(3'b11, a)")

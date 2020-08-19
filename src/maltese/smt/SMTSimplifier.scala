@@ -80,6 +80,8 @@ object SMTSimplifier {
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     // slice of slice
     case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(e, innerLo, hi=hi, lo=lo)
+    // slice of a literal
+    case BVSlice(BVLiteral(value, _), hi, lo) => BVLiteral(SMTExprEval.doBVSlice(value, hi=hi, lo=lo), expr.width)
     // slice of concat (this can enable new simplifications)
     // TODO: we can probably make this a bit more performant by only performing top-down instead of bottom up
     //       simplifications since the leaves are already simplified.

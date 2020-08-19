@@ -27,8 +27,9 @@ sealed trait BVExpr extends SMTExpr {
   def width: Int
   override def toString: String = SMTExprSerializer.serialize(this)
 }
-case class BVLiteral private(val value: BigInt, val width: Int) extends BVExpr with SMTNullaryExpr {
+case class BVLiteral(value: BigInt, width: Int) extends BVExpr with SMTNullaryExpr {
   private def minWidth = value.bitLength + (if(value <= 0) 1 else 0)
+  assert(value >= 0, "Negative values are not supported! Please normalize by calculating 2s complement." )
   assert(width > 0, "Zero or negative width literals are not allowed!")
   assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
 }
