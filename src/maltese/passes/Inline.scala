@@ -17,33 +17,62 @@ import scala.collection.mutable
 object Inline extends Pass {
   override def name: String = "Inline"
 
+  // some setting to play around with
+  private val InlineUseMax = 1
+  private val InlineLeaves = true
+  private val InlineIteInIte = false
+  private val InlineConcatInSlice = false
+
   override def run(sys: TransitionSystem): TransitionSystem = {
     val doInline = findSignalsToInline(sys)
     if(doInline.isEmpty) {
       sys
     } else {
       val inlineExpr = mutable.HashMap[String, SMTExpr]()
+      implicit val ctx: InliningContext = new InliningContext(doInline.contains, inlineExpr.get)
       val signals = sys.signals.map { signal =>
-        val inlinedE = replaceSymbols(signal.e)(inlineExpr.get)
-        if(doInline.contains(signal.name)) { inlineExpr(signal.name) = inlinedE }
+        val inlinedE = replaceSymbols(signal.e, false, false)
+        inlineExpr(signal.name) = inlinedE
         signal.copy(e = inlinedE)
       }
       sys.copy(signals = signals)
     }
   }
 
-  private def replaceSymbols(e: SMTExpr)(implicit m: String => Option[SMTExpr]): SMTExpr = e match {
-    case s @ BVSymbol(name, _) => m(name).getOrElse(s)
-    case s @ ArraySymbol(name, _, _) => m(name).getOrElse(s)
-    case other => other.mapExpr(replaceSymbols)
+  private class InliningContext(alwaysInline: String => Boolean,  inlineExpr: String => Option[SMTExpr]) {
+    def apply(name: String, inIte: Boolean, inSlice: Boolean): Option[SMTExpr] =
+      (inIte && InlineIteInIte, inSlice && InlineConcatInSlice) match {
+        case (_, _) if alwaysInline(name) => inlineExpr(name)
+        case (true, false) => // in ite context
+          inlineExpr(name) match {
+            case Some(e@(_: BVIte | _: ArrayIte)) => Some(e)
+            case _ => None
+          }
+        case (false, true) => // in slice context
+          inlineExpr(name) match {
+            case Some(e: BVConcat) => Some(e)
+            case _ => None
+          }
+        case _ => None
+      }
+  }
+
+  private def replaceSymbols(e: SMTExpr, inIte: Boolean, inSlice: Boolean)
+                            (implicit ctx: InliningContext): SMTExpr = e match {
+    case s @ BVSymbol(name, _) => ctx(name, inIte, inSlice).getOrElse(s)
+    case s @ ArraySymbol(name, _, _) => ctx(name, inIte, inSlice).getOrElse(s)
+    // context dependent inlining
+    case ite : BVIte => ite.mapExpr(replaceSymbols(_, true, false))
+    case slice : BVSlice => slice.mapExpr(replaceSymbols(_, false, true))
+    case other => other.mapExpr(replaceSymbols(_, false, false))
   }
 
   private def findSignalsToInline(sys: TransitionSystem): Set[String] = {
     // count how often a symbol is used
     val useCount = Analysis.countUses(sys.signals)
-    val onlyUsedOnce = sys.signals.filter(s => useCount(s.name) <= 1).map(_.name).toSet
+    val onlyUsedOnce = sys.signals.filter(s => useCount(s.name) <= InlineUseMax).map(_.name).toSet
     // we also want to inline signals that are only aliases
-    val leafSignals = sys.signals.filter(s => isLeafExpr(s.e)).map(_.name).toSet
+    val leafSignals = if(InlineLeaves) sys.signals.filter(s => isLeafExpr(s.e)).map(_.name).toSet else Set[String]()
     // only regular node signals can be inlined
     val canBeInlined = sys.signals.filter(_.lbl == IsNode).map(_.name).toSet
 
