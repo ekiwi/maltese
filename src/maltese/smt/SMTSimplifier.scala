@@ -16,30 +16,27 @@ object SMTSimplifier {
     case other => other
   }
 
-  private val True = BVLiteral(1,1)
-  private val False = BVLiteral(0,1)
-
   private def simplifyBVIte(i: BVIte): BVExpr = (i.cond, i.tru, i.fals) match {
     // constant condition
-    case (True, tru, _) => tru
-    case (False, _, fals) => fals
+    case (BVLiteral(1,1), tru, _) => tru
+    case (BVLiteral(0,1), _, fals) => fals
 
     // same result
     case (_, tru, fals) if tru == fals => tru
 
     // boolean result (all verified with sympy)
     // simplify_logic(ITE(c, 1, 0)) = c
-    case (cond, True, False) => cond
+    case (cond, BVLiteral(1,1), BVLiteral(0,1)) => cond
     // simplify_logic(ITE(c, 0, 1)) = ~c
-    case (cond, False, True) => BVNot(cond)
+    case (cond, BVLiteral(0,1), BVLiteral(1,1)) => BVNot(cond)
     // simplify_logic(ITE(c, 1, b)) = b | c
-    case (cond, True, b) => or(cond, b)
+    case (cond, BVLiteral(1,1), b) => or(cond, b)
     // simplify_logic(ITE(c, 0, b)) = b & ~c
-    case (cond, False, b) => and(not(cond), b)
+    case (cond, BVLiteral(0,1), b) => and(not(cond), b)
     // simplify_logic(ITE(c, b, 1)) = b | ~c
-    case (cond, b, True) => or(not(cond), b)
+    case (cond, b, BVLiteral(1,1)) => or(not(cond), b)
     // simplify_logic(ITE(c, b, 0)) = b & c
-    case (cond, b, False) => and(cond, b)
+    case (cond, b, BVLiteral(0,1)) => and(cond, b)
 
     // nested ite
     case (condA, BVIte(condB, truB, falsB), falsA) if falsA == falsB => BVIte(and(condA, condB), truB, falsA)

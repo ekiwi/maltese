@@ -28,8 +28,6 @@ object Maltese {
     Inline,
     DeadCodeElimination,
 
-    // TODO: debug why e.g. "ite(s583, _input_20, ite(1'b0, 2'b0, s578)" is not simplified (should be s578)
-    Simplify,
     PrintSystem,
   )
 
