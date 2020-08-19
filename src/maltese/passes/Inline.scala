@@ -21,7 +21,7 @@ object Inline extends Pass {
   private val InlineUseMax = 1
   private val InlineLeaves = true
   private val InlineIteInIte = false
-  private val InlineConcatInSlice = false
+  private val InlineConcatInSlice = true
 
   override def run(sys: TransitionSystem): TransitionSystem = {
     val doInline = findSignalsToInline(sys)
