@@ -6,9 +6,7 @@ package maltese.smt
 
 object SMTExprEval {
 
-  def doBVSlice(e: BigInt, hi: Int, lo: Int): BigInt = {
-    val width = hi - lo + 1
-    val mask = (BigInt(1) << width) - 1
-    (e >> lo) & mask
-  }
+  def doBVSlice(e: BigInt, hi: Int, lo: Int): BigInt = (e >> lo) & mask(hi - lo + 1)
+
+  private def mask(width: Int): BigInt = (BigInt(1) << width) - 1
 }
