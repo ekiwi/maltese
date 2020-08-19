@@ -71,4 +71,9 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
     assert(simplify(BVSlice(longLeft,  5, 2)).toString == "concat(a[0], 3'b11)")
     assert(simplify(BVSlice(longRight, 5, 2)).toString == "concat(a[0], 3'b11)")
   }
+
+  it should "push slice into ite" in {
+    val (a, b, c) = (bv("a", 4), bv("b", 4), bv("c", 1))
+    assert(simplify(BVSlice(BVIte(c, a, b), 0, 0)).toString == "ite(c, a[0], b[0])")
+  }
 }
