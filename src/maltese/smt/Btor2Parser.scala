@@ -43,9 +43,9 @@ private object Btor2Parser {
     // unique name generator
     val uniqueNames = new mutable.HashSet[String]()
     def isUnique(name: String): Boolean = !uniqueNames.contains(name)
-    def nameFromPrefix(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next
+    def nameFromPrefix(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next()
     def ensureUnique(name: String): String = {
-      val unique = (Iterator(name) ++ Iterator.from(0).map(i => name + "_" + i)).filter(isUnique).next
+      val unique = (Iterator(name) ++ Iterator.from(0).map(i => name + "_" + i)).filter(isUnique).next()
       uniqueNames.add(unique)
       unique
     }
