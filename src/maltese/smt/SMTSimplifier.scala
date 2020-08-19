@@ -10,7 +10,7 @@ object SMTSimplifier {
   def simplify(expr: SMTExpr): SMTExpr = expr.mapExpr(simplify) match {
     case op: BVOp => simplifyOp(op)
     case BVExtend(e, 0, _) => e
-    case BVSlice(e, hi, 0) if hi == e.width - 1 => e
+    case slice: BVSlice => simplifySlice(slice)
     case BVNot(BVNot(e)) => e
     case ite: BVIte => simplifyBVIte(ite)
     case other => other
@@ -55,6 +55,14 @@ object SMTSimplifier {
     case BVOp(Op.Or, BVLiteral(1, 1), _) => BVLiteral(1, 1)
     case BVOp(Op.Or, a, BVLiteral(0, 1)) => a
     case BVOp(Op.Or, BVLiteral(0, 1), b) => b
+    case other => other
+  }
+
+  // we try to "push" slice expressions as far down as possible
+  // e.g. concat(1'b1, 1'b0)[0] => 1'b0
+  private def simplifySlice(expr: BVSlice): BVExpr = expr match {
+    // no-op
+    case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     case other => other
   }
 
