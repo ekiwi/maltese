@@ -33,6 +33,9 @@ object SMTExprSerializer {
     case ArrayEqual(a, b) => s"eq(${serialize(a)}, ${serialize(b)})"
     // ternary
     case BVIte(cond, tru, fals) => s"ite(${serialize(cond)}, ${serialize(tru)}, ${serialize(fals)})"
+    // n-ary
+    case BVSelect(choices) =>
+      choices.map{ case (c,v) => serialize(c) + " -> " + serialize(v) }.mkString("select(", ", ", ")")
   }
 
   def serialize(expr: ArrayExpr): String = expr match {

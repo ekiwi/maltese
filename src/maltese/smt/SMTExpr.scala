@@ -113,6 +113,15 @@ case class BVIte(cond: BVExpr, tru: BVExpr, fals: BVExpr) extends BVExpr {
   override val width: Int = tru.width
   override def children: List[BVExpr] = List(cond, tru, fals)
 }
+/** Custom node which can represent nested ites.
+ * Must ensure (usually by-construction) that all choices are mutually exclusive. */
+case class BVSelect(choices: List[(BVExpr, BVExpr)]) extends BVExpr {
+  assert(choices.nonEmpty, "needs at least one choice")
+  assert(choices.forall(_._1.width == 1), "all conditions need to be 1-bit expressions")
+  override val width: Int = choices.head._2.width
+  assert(choices.forall(_._2.width == width), "all values must be of the same width")
+  override def children: List[SMTExpr] = choices.flatMap(c => List(c._1, c._2))
+}
 
 sealed trait ArrayExpr extends SMTExpr {
   val indexWidth: Int
