@@ -22,6 +22,7 @@ object Inline extends Pass {
   private val InlineLeaves = true
   private val InlineIteInIte = false
   private val InlineConcatInSlice = true
+  private val InlineIteInSlice = true
 
   override def run(sys: TransitionSystem): TransitionSystem = {
     val doInline = findSignalsToInline(sys)
@@ -40,17 +41,17 @@ object Inline extends Pass {
   }
 
   private class InliningContext(alwaysInline: String => Boolean,  inlineExpr: String => Option[SMTExpr]) {
-    def apply(name: String, inIte: Boolean, inSlice: Boolean): Option[SMTExpr] =
-      (inIte && InlineIteInIte, inSlice && InlineConcatInSlice) match {
+    def apply(name: String, inIte: Boolean, inSlice: Boolean): Option[SMTExpr] = (inIte, inSlice) match {
         case (_, _) if alwaysInline(name) => inlineExpr(name)
         case (true, false) => // in ite context
           inlineExpr(name) match {
-            case Some(e@(_: BVIte | _: ArrayIte)) => Some(e)
+            case Some(e@(_: BVIte | _: ArrayIte)) if InlineIteInIte => Some(e)
             case _ => None
           }
         case (false, true) => // in slice context
           inlineExpr(name) match {
-            case Some(e: BVConcat) => Some(e)
+            case Some(e: BVConcat) if InlineConcatInSlice => Some(e)
+            case Some(e: BVIte) if InlineIteInSlice => Some(e)
             case _ => None
           }
         case _ => None

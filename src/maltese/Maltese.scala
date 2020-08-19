@@ -26,6 +26,8 @@ object Maltese {
     Inline,
     DeadCodeElimination,
 
+    Simplify,
+
     PrintSystem,
   )
 
