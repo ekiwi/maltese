@@ -14,4 +14,11 @@ class SMTSimplifierSliceSpec extends SMTSimplifierBaseSpec {
     assert(simplify(BVSlice(bv("a", 3), 2, 0))   == bv("a", 3))
     assert(simplify(BVSlice(bv("a", 13), 12, 0)) == bv("a", 13))
   }
+
+  it should "simplify slice of slice" in {
+    assert(simplify(BVSlice(BVSlice(bv("a", 3), 2,1), 1, 1)) ==
+      BVSlice(bv("a", 3), 2,2))
+    assert(simplify(BVSlice(BVSlice(BVSlice(bv("a", 5), 4,1), 3, 1), 2, 2)) ==
+      BVSlice(bv("a", 5), 4,4))
+  }
 }

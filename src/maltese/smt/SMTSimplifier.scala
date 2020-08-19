@@ -70,7 +70,15 @@ object SMTSimplifier {
   private def simplifySlice(expr: BVSlice): BVExpr = expr match {
     // no-op
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
+    // slice of slice
+    case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(hi, lo, innerLo, e)
     case other => other
+  }
+
+  private def combineSlice(hi: Int, lo: Int, innerLo: Int, expr: BVExpr): BVSlice = {
+    val combinedLo = lo + innerLo
+    val combinedHi = hi + innerLo
+    BVSlice(expr, hi=combinedHi, lo=combinedLo)
   }
 
   private def and(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)
