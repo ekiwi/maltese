@@ -36,7 +36,7 @@ case class BVLiteral(value: BigInt, width: Int) extends BVExpr with SMTNullaryEx
 
 case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
   assert(!name.contains("|"), s"Invalid id $name contains escape character `|`")
-  assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
+  // assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
   assert(width > 0, "Zero width bit vectors are not supported!")
   override def toStringWithType: String = name + " : " + SMTExpr.serializeType(this)
 }
