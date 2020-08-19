@@ -6,17 +6,8 @@ package maltese.smt
 
 import org.scalatest.flatspec.AnyFlatSpec
 
-
-class SMTSimplifierSpec extends AnyFlatSpec {
+class SMTSimplifierSpec extends SMTSimplifierBaseSpec {
   behavior of "SMTSimplifier"
-
-  protected def simplify(e: SMTExpr): SMTExpr = SMTSimplifier.simplify(e)
-  private val tru = BVLiteral(1, 1)
-  private val fals = BVLiteral(0, 1)
-  private val (b, c) = (BVSymbol("b", 1), BVSymbol("c", 1))
-  private def and(a: BVExpr, b: BVExpr): BVExpr = BVOp(Op.And, a, b)
-  private def or(a: BVExpr, b: BVExpr): BVExpr = BVOp(Op.Or, a, b)
-  private def not(a: BVExpr): BVExpr = BVNot(a)
 
   it should "simplify boolean and" in {
 
@@ -80,12 +71,15 @@ class SMTSimplifierSpec extends AnyFlatSpec {
     assert(simplify(BVIte(fals, c, b)) == b)
     assert(simplify(BVIte(b, c, c)) == c)
   }
+}
 
-  private def bv(name: String, width: Int = 4): BVSymbol = BVSymbol(name, width)
-
-  it should "simplify slice no-op" in {
-    assert(simplify(BVSlice(bv("a", 3), 2, 0))   == bv("a", 3))
-    assert(simplify(BVSlice(bv("a", 13), 12, 0)) == bv("a", 13))
-  }
-
+abstract class SMTSimplifierBaseSpec extends AnyFlatSpec {
+  protected def simplify(e: SMTExpr): SMTExpr = SMTSimplifier.simplify(e)
+  protected val tru = BVLiteral(1, 1)
+  protected val fals = BVLiteral(0, 1)
+  protected val (b, c) = (BVSymbol("b", 1), BVSymbol("c", 1))
+  protected def and(a: BVExpr, b: BVExpr): BVExpr = BVOp(Op.And, a, b)
+  protected def or(a: BVExpr, b: BVExpr): BVExpr = BVOp(Op.Or, a, b)
+  protected def not(a: BVExpr): BVExpr = BVNot(a)
+  protected def bv(name: String, width: Int = 4): BVSymbol = BVSymbol(name, width)
 }
