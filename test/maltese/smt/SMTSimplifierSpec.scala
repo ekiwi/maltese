@@ -75,4 +75,10 @@ class SMTSimplifierSpec extends AnyFlatSpec {
     assert(simplify(not(not(not(not(b))))) == b)
   }
 
+  it should "simplify ITE" in {
+    assert(simplify(BVIte(tru, c, b)) == c)
+    assert(simplify(BVIte(fals, c, b)) == b)
+    assert(simplify(BVIte(b, c, c)) == c)
+  }
+
 }
