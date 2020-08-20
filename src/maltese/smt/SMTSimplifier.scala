@@ -115,17 +115,4 @@ object SMTSimplifier {
   private def and(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)
   private def or(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.Or, a, b)
   private def not(a: BVExpr): BVNot = BVNot(a)
-
-  // unapply for matching BVLiteral(1, 1)
-  private object True  {
-    private val _True = BVLiteral(1, 1)
-    def apply(): BVLiteral = _True
-    def unapply(l: BVLiteral): Boolean = l.value == 1 && l.width == 1
-  }
-  // unapply for matching BVLiteral(0, 1)
-  private object False {
-    private val _False = BVLiteral(0, 1)
-    def apply(): BVLiteral = _False
-    def unapply(l: BVLiteral): Boolean = l.value == 0 && l.width == 1
-  }
 }

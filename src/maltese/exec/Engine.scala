@@ -15,14 +15,8 @@ class Engine private(sys: TransitionSystem) {
   private val signals = sys.signals.map(s => s.name -> s).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
 
-  def computeSignalAt(name: String, step: Int): BVValueSummary = {
-
-  }
-
-  private def eval(e: BVExpr, step: Int): BVValueSummary = e match {
-
-
-  }
+  def computeSignalAt(name: String, step: Int): BVValueSummary = ???
+  private def eval(e: BVExpr, step: Int): BVValueSummary = ???
 
 
 
