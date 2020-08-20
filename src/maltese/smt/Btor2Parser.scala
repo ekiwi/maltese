@@ -38,17 +38,14 @@ private object Btor2Parser {
     val inputs = new mutable.ArrayBuffer[BVSymbol]()
     val signals = new mutable.LinkedHashMap[Int,Signal]()
     val yosysLabels = new mutable.HashMap[Int,String]()
+    val namespace = Namespace()
 
 
     // unique name generator
-    val uniqueNames = new mutable.HashSet[String]()
-    def isUnique(name: String): Boolean = !uniqueNames.contains(name)
-    def nameFromPrefix(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next()
-    def ensureUnique(name: String): String = {
-      val unique = (Iterator(name) ++ Iterator.from(0).map(i => name + "_" + i)).filter(isUnique).next()
-      uniqueNames.add(unique)
-      unique
-    }
+    def isUnique(name: String): Boolean = !namespace.contains(name)
+    def nameFromPrefix(prefix: String): String =
+      namespace.newName(Iterator.from(0).map(i => s"_${prefix}_$i").filter(isUnique).next())
+
 
     // while not part of the btor2 spec, yosys annotates the system's name
     var name: Option[String] = None
@@ -133,7 +130,7 @@ private object Btor2Parser {
       }
 
       def getLabelName(prefix: String): String =
-        ensureUnique(if(parts.length > 3) parts(3) else nameFromPrefix(prefix))
+        if(parts.length > 3) namespace.newName(parts(3)) else nameFromPrefix(prefix)
 
       def toSymbolOrExpr(name: String, e: SMTExpr): SMTExpr = if(inlineSignals) e else SMTSymbol.fromExpr(name, e)
 
@@ -161,7 +158,7 @@ private object Btor2Parser {
         case "next" =>
           val stateId = Integer.parseInt(parts(3))
           val state = states(stateId)
-          name = Some(ensureUnique(state.sym.name + ".next"))
+          name = Some(namespace.newName(state.sym.name + ".next"))
           label = IsNext
           val nextExpr = expr(1)
           states.put(stateId, state.copy(next=Some(toSymbolOrExpr(name.get,  nextExpr))))
@@ -169,7 +166,7 @@ private object Btor2Parser {
         case "init" =>
           val stateId = Integer.parseInt(parts(3))
           val state = states(stateId)
-          name = Some(ensureUnique(state.sym.name + ".init"))
+          name = Some(namespace.newName(state.sym.name + ".init"))
           label = IsInit
           val initExpr = expr(1)
           states.put(stateId, state.copy(init=Some(toSymbolOrExpr(name.get, initExpr))))
@@ -210,7 +207,7 @@ private object Btor2Parser {
       }
       new_expr match {
         case Some(expr) =>
-          val n = name.getOrElse(ensureUnique("s" + id))
+          val n = name.getOrElse(namespace.newName("s" + id))
           signals.put(id, Signal(n, expr, label))
         case _ =>
       }

@@ -33,7 +33,7 @@ case object IsInit extends SignalLabel
 
 object SignalLabel {
   private val labels = Seq(IsNode, IsOutput, IsConstraint, IsBad, IsFair, IsNext, IsInit)
-  private val labelStrings = Seq("node", "output", "constraint", "bad", "fair", "next", "init")
+  val labelStrings = Seq("node", "output", "constraint", "bad", "fair", "next", "init")
   val labelToString: SignalLabel => String = labels.zip(labelStrings).toMap
   val stringToLabel: String => SignalLabel = labelStrings.zip(labels).toMap
 }
