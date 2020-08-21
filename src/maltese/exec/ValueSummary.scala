@@ -85,7 +85,9 @@ object BVValueSummary {
 
   private def importIntoGuard(ctx: SymbolicContext, entries: List[BVEntry]): List[BVEntry] = {
     val tru = entries.map(e => e.guard.and(ctx.smtToBdd(e.value))).reduce((a,b) => a.or(b))
-    List(BVEntry(tru, True()), BVEntry(tru.not(), False()))
+    val newEntries = List(BVEntry(tru, True()), BVEntry(tru.not(), False())).filterNot(_.guard.isZero)
+    assert(newEntries.nonEmpty)
+    newEntries
   }
 
   private def toSMT(v: BVValueSummary): BVExpr = {

@@ -19,6 +19,8 @@ class BDDToSMTConverter(
 
   val tru : BDD = bdds.one()
   val fals : BDD = bdds.zero()
+  smtToBddCache(True()) = tru
+  smtToBddCache(False()) = fals
 
   def smtToBdd(expr: BVExpr) : BDD = {
     assert(expr.width == 1, s"can only convert 1-bit expressions to BDD, but `$expr` is ${expr.width}-bit")
@@ -64,8 +66,9 @@ class BDDToSMTConverter(
       val is_or_neg_var = low_is_one
       val is_and_var = low_is_zero
 
-      val cond = bddLiteralToSmt(bdd.`var`())
-      lazy val neg_cond = BVNot(cond)
+      val varId = bdd.`var`()
+      val cond = bddLiteralToSmt(varId)
+      val neg_cond = BVNot(cond)
 
       if(is_var) { cond }
       else if(is_neg_var) { neg_cond }
