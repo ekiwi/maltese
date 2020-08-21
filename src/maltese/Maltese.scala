@@ -8,7 +8,7 @@ import java.io.File
 
 import maltese.exec.Engine
 import maltese.passes._
-import maltese.smt.IsBad
+import maltese.smt.{IsBad, TransitionSystem}
 
 object MalteseApp extends App {
   if(args.length < 1) {
@@ -39,11 +39,20 @@ object Maltese {
 
     println(s"Loaded $filename")
 
-    val simplified = PassManager(passes).run(sys, trace = true)
+    val simplified = simplifySystem(sys)
 
-    val e = Engine(simplified)
+    check(simplified)
+    //check(sys)
 
-    val bad = simplified.signals.filter(_.lbl == IsBad).map(_.name)
+
+  }
+
+  def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = true)
+
+  def check(sys: TransitionSystem): Unit = {
+    val e = Engine(sys)
+
+    val bad = sys.signals.filter(_.lbl == IsBad).map(_.name)
     bad.foreach { b =>
       (0 until 3).foreach { step =>
         val r = e.signalAt(b, step)
