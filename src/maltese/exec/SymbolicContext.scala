@@ -29,7 +29,7 @@ class SymbolicContext(
    // tries to discover relationship between atomic predicates and use them to simplify BDDs
    //val MinePredicateTheoremsInSmtToBdd: Boolean = false,
    // runs a isUnSat query on every guard in the ValueSummary resulting from the ITE, unsat entries are discarded
-   val CheckITEConditionWithSmtSolver: Boolean = true,
+   val CheckITEConditionWithSmtSolver: Boolean = false,
    // SMT solver to use
    solver : Solver = Yices2(),
    // BDD implementation
@@ -41,7 +41,7 @@ class SymbolicContext(
  def isUnSat(expr: BVExpr): Boolean = {
   assert(expr.width == 1, "satisfiability checks require a boolean formula")
   // TODO: add optimizations and caching
-  solver.check(expr).isUnSat
+  solver.check(expr, false).isUnSat
  }
 
   ///////////////// BDDs
