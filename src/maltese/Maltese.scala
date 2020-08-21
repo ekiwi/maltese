@@ -50,11 +50,11 @@ object Maltese {
   def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = true)
 
   def check(sys: TransitionSystem): Unit = {
-    val e = Engine(sys)
+    val e = Engine(sys, noInit = true)
 
     val bad = sys.signals.filter(_.lbl == IsBad).map(_.name)
     bad.foreach { b =>
-      (0 until 3).foreach { step =>
+      (0 until 1).foreach { step =>
         val r = e.signalAt(b, step)
         println(s"$b@$step: $r")
       }

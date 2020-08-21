@@ -8,10 +8,10 @@ import maltese.smt._
 import scala.collection.mutable
 
 object Engine {
-  def apply(sys: TransitionSystem): Engine = new Engine(sys)
+  def apply(sys: TransitionSystem, noInit: Boolean = false): Engine = new Engine(sys, noInit)
 }
 
-class Engine private(sys: TransitionSystem) {
+class Engine private(sys: TransitionSystem, noInit: Boolean) {
   private val inputs = sys.inputs.map(i => i.name -> i).toMap
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
@@ -58,7 +58,7 @@ class Engine private(sys: TransitionSystem) {
   private def stateAt(name: String, step: Int): BVValueSummary = {
     val state = states(name)
     if(step == 0) {
-      if(state.init.isDefined) {
+      if(state.init.isDefined && !noInit) {
         signalAt(name + ".init", 0)
       } else {
         val sym = symbols.getOrElseUpdate(name + "@0", SMTSymbol.fromExpr(name + "@0", state.sym).asInstanceOf[BVSymbol])
