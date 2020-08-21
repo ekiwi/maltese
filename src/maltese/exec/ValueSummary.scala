@@ -17,7 +17,6 @@ object BVValueSummary {
 
   def binary(a: BVValueSummary, b: BVValueSummary, op: (BVExpr, BVExpr) => BVExpr): BVValueSummary = {
     assert(a.ctx.eq(b.ctx))
-    val ctx = a.ctx
 
     val pairs = for(e1 <- a.entries; e2 <- b.entries) yield { (e1.guard.and(e2.guard), e1.value, e2.value) }
     val newEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
