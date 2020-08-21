@@ -66,7 +66,8 @@ object BVValueSummary {
     }
   }
 
-  private def simplify(expr: BVExpr): BVExpr = ???
+  // TODO: we could get better performance by only simplifying one new expression
+  private def simplify(expr: BVExpr): BVExpr = SMTSimplifier.simplify(expr).asInstanceOf[BVExpr]
 
   private case class BVEntry(guard: BDD, value: BVExpr) {
     def width = value.width

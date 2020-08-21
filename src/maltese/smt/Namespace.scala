@@ -35,7 +35,7 @@ object Namespace {
   }
 
   private val isAllowedStart = (('a' to 'z') ++ ('A' to 'Z') :+ '_').toSet
-  private val OtherCharacters = Seq('_', '!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '.', ',')
+  private val OtherCharacters = Seq('_', '!', '#', '$', '%', '^', '&', '*', '-', '+', '.', ',')
   private val isAllowed = (('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9') ++ OtherCharacters).toSet
 
   private val TempNamePrefix = "_GEN"

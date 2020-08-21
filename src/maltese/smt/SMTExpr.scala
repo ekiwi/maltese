@@ -43,11 +43,13 @@ case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
 
 sealed trait BVUnaryExpr extends BVExpr {
   def e: BVExpr
+  def reapply(expr: BVExpr): BVUnaryExpr
   override def children: List[BVExpr] = List(e)
 }
 case class BVExtend(e: BVExpr, by: Int, signed: Boolean) extends BVUnaryExpr {
   assert(by >= 0, "Extension must be non-negative!")
   override val width: Int = e.width + by
+  override def reapply(expr: BVExpr) = BVExtend(expr, by, signed)
 }
 // also known as bit extract operation
 case class BVSlice(e: BVExpr, hi: Int, lo: Int) extends BVUnaryExpr {
@@ -55,22 +57,27 @@ case class BVSlice(e: BVExpr, hi: Int, lo: Int) extends BVUnaryExpr {
   assert(hi >= lo, s"hi (msb) must not be smaller than lo (lsb): msb: $hi lsb: $lo")
   assert(e.width > hi, s"Out off bounds hi (msb) access: width: ${e.width} msb: $hi")
   override def width: Int = hi - lo + 1
+  override def reapply(expr: BVExpr) = BVSlice(expr, hi, lo)
 }
 case class BVNot(e: BVExpr) extends BVUnaryExpr {
   override val width: Int = e.width
+  override def reapply(expr: BVExpr) = BVNot(expr)
 }
 case class BVNegate(e: BVExpr) extends BVUnaryExpr {
   override val width: Int = e.width
+  override def reapply(expr: BVExpr) = BVNegate(expr)
 }
 
 sealed trait BVBinaryExpr extends BVExpr {
   def a: BVExpr
   def b: BVExpr
   override def children: List[BVExpr] = List(a, b)
+  def reapply(nA: BVExpr, nB: BVExpr): BVBinaryExpr
 }
 case class BVEqual(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1
+  override def reapply(nA: BVExpr, nB: BVExpr) = BVEqual(nA, nB)
 }
 object Compare extends Enumeration {
   val Greater, GreaterEqual = Value
@@ -78,6 +85,7 @@ object Compare extends Enumeration {
 case class BVComparison(op: Compare.Value, a: BVExpr, b: BVExpr, signed: Boolean) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1
+  override def reapply(nA: BVExpr, nB: BVExpr) = BVComparison(op, nA, nB, signed)
 }
 object Op extends Enumeration {
   val And = Value("and")
@@ -98,9 +106,11 @@ object Op extends Enumeration {
 case class BVOp(op: Op.Value, a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override val width: Int = a.width
+  override def reapply(nA: BVExpr, nB: BVExpr) = BVOp(op, nA, nB)
 }
 case class BVConcat(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   override val width: Int = a.width + b.width
+  override def reapply(nA: BVExpr, nB: BVExpr) = BVConcat(nA, nB)
 }
 case class ArrayRead(array: ArrayExpr, index: BVExpr) extends BVExpr {
   assert(array.indexWidth == index.width, "Index with does not match expected array index width!")

@@ -12,12 +12,63 @@ object Engine {
 }
 
 class Engine private(sys: TransitionSystem) {
+  private val inputs = sys.inputs.map(i => i.name -> i).toMap
+  private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
+  private implicit val ctx = new SymbolicContext()
 
-  def computeSignalAt(name: String, step: Int): BVValueSummary = ???
-  private def eval(e: BVExpr, step: Int): BVValueSummary = ???
+  def signalAt(name: String, step: Int): BVValueSummary = {
+    if(results.size < step + 1) {
+      (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
+    }
+    val frame = results(step)
+    if(!frame.contains(name)) {
+      frame(name) = computeSignalAt(name, step)
+    }
+    frame(name)
+  }
+
+  private def computeSignalAt(name: String, step: Int): BVValueSummary = {
+    if(signals.contains(name)) {
+      eval(signals(name).e.asInstanceOf[BVExpr], step)
+    } else if(inputs.contains(name)) {
+      inputAt(name, step)
+    } else if(states.contains(name)) {
+      stateAt(name, step)
+    } else {
+      throw new RuntimeException(s"Unknown signal $name @ $step")
+    }
+  }
+  private def eval(expr: BVExpr, step: Int): BVValueSummary = expr match {
+    case BVSymbol(name, _) => computeSignalAt(name, step)
+    case l : BVLiteral => BVValueSummary(l)
+    case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, step), u.reapply)
+    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, step), eval(u.b, step), u.reapply)
+    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, step), eval(tru, step), eval(fals, step))
+    case other => throw new RuntimeException(s"Unexpected expression: $other")
+  }
 
 
+  private def stateAt(name: String, step: Int): BVValueSummary = {
+    val state = states(name)
+    if(step == 0) {
+      if(state.init.isDefined) {
+        computeSignalAt(name + ".init", 0)
+      } else {
+        val sym = symbols.getOrElseUpdate(name + "@0", SMTSymbol.fromExpr(name + "@0", state.sym).asInstanceOf[BVSymbol])
+        BVValueSummary(sym)
+      }
+    } else {
+      assert(step > 0)
+      computeSignalAt(name + ".next", step - 1)
+    }
+  }
 
+  private def inputAt(name: String, step: Int): BVValueSummary = {
+    val id = name + "@" + step
+    val sym = symbols.getOrElseUpdate(id, BVSymbol(id, inputs(name).width))
+    BVValueSummary(sym)
+  }
+  private def symbols = mutable.HashMap[String, BVSymbol]()
 }
