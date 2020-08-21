@@ -26,7 +26,9 @@ class Engine private(sys: TransitionSystem) {
     if(!frame.contains(name)) {
       frame(name) = computeSignalAt(name, step)
     }
-    frame(name)
+    val r = frame(name)
+    // println(s"$name@$step: $r")
+    r
   }
 
   private def computeSignalAt(name: String, step: Int): BVValueSummary = {
@@ -41,7 +43,7 @@ class Engine private(sys: TransitionSystem) {
     }
   }
   private def eval(expr: BVExpr, step: Int): BVValueSummary = expr match {
-    case BVSymbol(name, _) => computeSignalAt(name, step)
+    case BVSymbol(name, _) => signalAt(name, step)
     case l : BVLiteral => BVValueSummary(l)
     case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, step), u.reapply)
     case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, step), eval(u.b, step), u.reapply)
@@ -54,14 +56,14 @@ class Engine private(sys: TransitionSystem) {
     val state = states(name)
     if(step == 0) {
       if(state.init.isDefined) {
-        computeSignalAt(name + ".init", 0)
+        signalAt(name + ".init", 0)
       } else {
         val sym = symbols.getOrElseUpdate(name + "@0", SMTSymbol.fromExpr(name + "@0", state.sym).asInstanceOf[BVSymbol])
         BVValueSummary(sym)
       }
     } else {
       assert(step > 0)
-      computeSignalAt(name + ".next", step - 1)
+      signalAt(name + ".next", step - 1)
     }
   }
 

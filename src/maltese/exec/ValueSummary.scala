@@ -72,6 +72,19 @@ object BVValueSummary {
   private case class BVEntry(guard: BDD, value: BVExpr) {
     def width = value.width
   }
+
+  private def toSMT(v: BVValueSummary): BVExpr = {
+    if(v.entries.size == 1) { v.entries.head.value } else {
+      v.entries.drop(1).foldLeft(v.entries.head.value) { (a: BVExpr, b: BVEntry) =>
+        val cond = v.ctx.bddToSmt(b.guard)
+        val args = cond match {
+          case BVNot(n_cond) => List(n_cond, a, b.value)
+          case _ => List(cond, b.value, a)
+        }
+        BVIte(args(0), args(1), args(2))
+      }
+    }
+  }
 }
 
 
@@ -82,4 +95,5 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   assert(entries.forall(_.width == width))
   def isTrue: Boolean = entries.size == 1 && entries.head.value == True()
   def isFalse: Boolean = entries.size == 1 && entries.head.value == False()
+  override def toString = BVValueSummary.toSMT(this).toString
 }
