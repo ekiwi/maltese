@@ -6,6 +6,7 @@ package maltese.exec
 
 import net.sf.javabdd._
 import maltese.smt._
+import maltese.smt.solvers._
 
 class SymbolicContext(
    // MultiSE 3.2: without coalescing we get an algorithm that behaves essentially like conventional DSE
@@ -28,12 +29,20 @@ class SymbolicContext(
    // tries to discover relationship between atomic predicates and use them to simplify BDDs
    //val MinePredicateTheoremsInSmtToBdd: Boolean = false,
    // runs a isUnSat query on every guard in the ValueSummary resulting from the ITE, unsat entries are discarded
-   //val CheckITEConditionWithSmtSolver: Boolean = false,
+   val CheckITEConditionWithSmtSolver: Boolean = true,
    // SMT solver to use
-   //val solver : smt.Context with CallCount = new YicesInterface(), // with SMTLIB2Debugger,
+   solver : Solver = Yices2(),
    // BDD implementation
-   private val bdds : BDDFactory = JFactory.init(100, 100)
+   bdds : BDDFactory = JFactory.init(100, 100)
  ) {
+
+ def isUnSat(bdd: BDD): Boolean = isUnSat(bddConverter.bddToSmt(bdd))
+
+ def isUnSat(expr: BVExpr): Boolean = {
+  assert(expr.width == 1, "satisfiability checks require a boolean formula")
+  // TODO: add optimizations and caching
+  solver.check(expr).isUnSat
+ }
 
   ///////////////// BDDs
   private val bddConverter = new BDDToSMTConverter(bdds, ConvertBooleanOpsInSmtToBdd)

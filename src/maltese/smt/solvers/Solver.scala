@@ -6,6 +6,10 @@ package maltese.smt.solvers
 
 import maltese.smt._
 
+object Solver {
+  type Logic = SMTFeature.ValueSet
+}
+
 trait Solver {
   // basic properties
   def name: String
@@ -15,7 +19,7 @@ trait Solver {
   def supportsUninterpretedFunctions: Boolean
 
   // basic API
-  type Logic = SMTFeature.ValueSet
+  import Solver.Logic
   def setLogic(logic: Logic): Unit = {
     require(supportsQuantifiers || logic.contains(SMTFeature.QuantifierFree), s"$name does not support quantifiers!")
     require(supportsUninterpretedFunctions || !logic.contains(SMTFeature.UninterpretedFunctions),

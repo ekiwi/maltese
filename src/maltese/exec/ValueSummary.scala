@@ -37,7 +37,8 @@ object BVValueSummary {
       val ctx = cond.ctx
       assert(ctx.eq(tru.ctx) && ctx.eq(fals.ctx))
       // TODO: integrate SMT solver for better filtering
-      val isFalse: BDD => Boolean = { b => b.isZero }
+      val isFalse: BDD => Boolean =
+        if(ctx.CheckITEConditionWithSmtSolver) { b => b.isZero || ctx.isUnSat(b) } else { b => b.isZero }
 
       // find all conditions under which the true/false branch will be taken
       val truCond  = cond.entries.map(e => ctx.smtToBdd(e.value).and(e.guard)).filterNot(isFalse)
@@ -96,6 +97,8 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   assert(entries.forall(_.width == width))
   def isTrue: Boolean = entries.size == 1 && entries.head.value == True()
   def isFalse: Boolean = entries.size == 1 && entries.head.value == False()
-  override def toString = BVValueSummary.toSMT(this).toString
+  override def toString = if(size < 100) {
+    BVValueSummary.toSMT(this).toString
+  } else { s"ValueSummary w/ $size entries" }
   override def size = entries.size
 }

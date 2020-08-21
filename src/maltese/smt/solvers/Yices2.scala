@@ -9,12 +9,14 @@ import scala.collection.mutable
 
 
 object Yices2 {
-  def apply(): Yices2 = {
+  def apply(logic: Solver.Logic = QF_ABV): Yices2 = {
     val lib = Yices2Api.lib
     val conf = assertNoError(lib.yices_new_config())
     val ctx = assertNoError(lib.yices_new_context(conf))
     val params = assertNoError(lib.yices_new_param_record())
-    new Yices2(lib, conf, ctx, params)
+    val y = new Yices2(lib, conf, ctx, params)
+    y.setLogic(logic)
+    y
   }
   private def assertNoError[T](v: T): T = { Yices2Api.assertNoError() ; v }
   private def bitArrayToBigInt(a: Array[Int]): BigInt = BigInt(a.reverseIterator.map(_.toString).mkString(""), 2)
@@ -54,7 +56,7 @@ class Yices2 private(lib: Yices2Api, conf: Yices2Api.ConfigT, ctx: Yices2Api.Con
   private val symbols = new mutable.HashMap[String, SymbolInfo]
   private var model: Option[Yices2Api.ModelT] = None
 
-  override protected def doSetLogic(logic: Logic): Unit = {
+  override protected def doSetLogic(logic: Solver.Logic): Unit = {
     // TODO: is there a way to construct a solver for a particular logic?
     //lib.yices_default_config_for_logic(conf, "QF_AUFBV")
   }
