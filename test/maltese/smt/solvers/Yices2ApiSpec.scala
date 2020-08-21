@@ -71,7 +71,4 @@ class Yices2ApiSpec extends AnyFlatSpec {
     lib.yices_free_context(ctx) ; assert_no_error
     lib.yices_exit() ; assert_no_error
   }
-
-
-
 }

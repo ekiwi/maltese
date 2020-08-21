@@ -18,6 +18,8 @@ trait Yices2Api extends Library {
   // resets terms etc.
   def yices_reset(): Unit
 
+  def yices_is_thread_safe(): Int
+
   ///////////////////////
   // Error
   //////////////////////
