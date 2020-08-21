@@ -7,7 +7,9 @@ package maltese.exec
 import maltese.smt._
 import net.sf.javabdd.{BDD, JFactory}
 
-sealed trait ValueSummary
+sealed trait ValueSummary {
+  def size: Int
+}
 
 object BVValueSummary {
   def apply(expr: BVExpr)(implicit ctx: SymbolicContext): BVValueSummary
@@ -96,4 +98,5 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   def isTrue: Boolean = entries.size == 1 && entries.head.value == True()
   def isFalse: Boolean = entries.size == 1 && entries.head.value == False()
   override def toString = BVValueSummary.toSMT(this).toString
+  override def size = entries.size
 }

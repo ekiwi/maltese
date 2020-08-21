@@ -27,6 +27,9 @@ class Engine private(sys: TransitionSystem) {
       frame(name) = computeSignalAt(name, step)
     }
     val r = frame(name)
+    if(r.size > 1000) {
+      println(s"WARN: $name@$step.size = ${r.size} > 1k")
+    }
     // println(s"$name@$step: $r")
     r
   }
