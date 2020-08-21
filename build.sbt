@@ -9,6 +9,10 @@ scalacOptions ++= Seq(
   "-feature",
 )
 
+// JNA for SMT Solver bindings
+libraryDependencies += "net.java.dev.jna" % "jna" % "5.4.0"
+libraryDependencies += "net.java.dev.jna" % "jna-platform" % "5.4.0"
+
 // scalatest has the best IntelliJ support
 libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.1" % "test"
 
