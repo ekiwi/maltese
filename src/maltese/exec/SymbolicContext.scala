@@ -30,6 +30,9 @@ class SymbolicContext(
    //val MinePredicateTheoremsInSmtToBdd: Boolean = false,
    // runs a isUnSat query on every guard in the ValueSummary resulting from the ITE, unsat entries are discarded
    val CheckITEConditionWithSmtSolver: Boolean = false,
+   // Converts boolean SMT expressions into BDDs and imports them into the guard.
+   // This way the value summary will always have max. two entries.
+   val ImportBooleanExpressionsIntoGuard: Boolean = true,
    // SMT solver to use
    solver : Solver = Yices2(),
    // BDD implementation

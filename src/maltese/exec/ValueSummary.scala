@@ -20,13 +20,13 @@ object BVValueSummary {
 
     val pairs = for(e1 <- a.entries; e2 <- b.entries) yield { (e1.guard.and(e2.guard), e1.value, e2.value) }
     val newEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
-    new BVValueSummary(a.ctx, newEntries)
+    importIntoGuard(new BVValueSummary(a.ctx, newEntries))
   }
 
   def unary(a: BVValueSummary, op: BVExpr => BVExpr): BVValueSummary = {
     // all we need to do is to apply the operation to all entries + call simplify
     val newEntries = a.entries.map(e => e.copy(value = simplify(op(e.value))))
-    new BVValueSummary(a.ctx, newEntries)
+    importIntoGuard(new BVValueSummary(a.ctx, newEntries))
   }
 
   def ite(cond: BVValueSummary, tru: => BVValueSummary, fals: => BVValueSummary): BVValueSummary = {
@@ -52,7 +52,7 @@ object BVValueSummary {
 
       val rawEntries = combine(truCond, tru.entries) ++ combine(falsCond, fals.entries)
       val newEntries = if(ctx.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
-      new BVValueSummary(ctx, newEntries)
+      importIntoGuard(new BVValueSummary(ctx, newEntries))
     }
   }
 
@@ -73,6 +73,19 @@ object BVValueSummary {
 
   private case class BVEntry(guard: BDD, value: BVExpr) {
     def width = value.width
+  }
+
+
+  private def importIntoGuard(v: BVValueSummary): BVValueSummary =
+    if(v.width != 1 || !v.ctx.ImportBooleanExpressionsIntoGuard) {
+      v
+    } else {
+      new BVValueSummary(v.ctx, importIntoGuard(v.ctx, v.entries))
+    }
+
+  private def importIntoGuard(ctx: SymbolicContext, entries: List[BVEntry]): List[BVEntry] = {
+    val tru = entries.map(e => e.guard.and(ctx.smtToBdd(e.value))).reduce((a,b) => a.or(b))
+    List(BVEntry(tru, True()), BVEntry(tru.not(), False()))
   }
 
   private def toSMT(v: BVValueSummary): BVExpr = {
