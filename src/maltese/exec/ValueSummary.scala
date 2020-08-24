@@ -38,7 +38,7 @@ object BVValueSummary {
       assert(ctx.eq(tru.ctx) && ctx.eq(fals.ctx))
       // TODO: integrate SMT solver for better filtering
       val isFalse: BDD => Boolean =
-        if(ctx.CheckITEConditionWithSmtSolver) { b => b.isZero || ctx.isUnSat(b) } else { b => b.isZero }
+        if(ctx.opts.CheckITEConditionWithSmtSolver) { b => b.isZero || ctx.isUnSat(b) } else { b => b.isZero }
 
       // find all conditions under which the true/false branch will be taken
       val truCond  = cond.entries.map(e => ctx.smtToBdd(e.value).and(e.guard)).filterNot(isFalse)
@@ -51,7 +51,7 @@ object BVValueSummary {
         })
 
       val rawEntries = combine(truCond, tru.entries) ++ combine(falsCond, fals.entries)
-      val newEntries = if(ctx.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
+      val newEntries = if(ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
       importIntoGuard(new BVValueSummary(ctx, newEntries))
     }
   }
@@ -77,7 +77,7 @@ object BVValueSummary {
 
 
   private def importIntoGuard(v: BVValueSummary): BVValueSummary =
-    if(v.width != 1 || !v.ctx.ImportBooleanExpressionsIntoGuard) {
+    if(v.width != 1 || !v.ctx.opts.ImportBooleanExpressionsIntoGuard) {
       v
     } else {
       new BVValueSummary(v.ctx, importIntoGuard(v.ctx, v.entries))

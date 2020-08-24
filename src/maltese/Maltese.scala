@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.exec.Engine
+import maltese.exec.{Engine, Options}
 import maltese.passes._
 import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
 
@@ -68,7 +68,8 @@ object Maltese {
 
 
   def getConstraints(sys: TransitionSystem, doInit: Boolean): Unit = {
-    val e = Engine(sys, noInit = !doInit)
+    val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = false)
+    val e = Engine(sys, !doInit, opts)
     val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
     const.take(2).foreach { c =>
       val step = 0

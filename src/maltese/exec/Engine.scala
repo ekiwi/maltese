@@ -8,15 +8,16 @@ import maltese.smt._
 import scala.collection.mutable
 
 object Engine {
-  def apply(sys: TransitionSystem, noInit: Boolean = false): Engine = new Engine(sys, noInit)
+  def apply(sys: TransitionSystem, noInit: Boolean = false, opts: Options = Options.Default): Engine =
+    new Engine(sys, noInit, opts)
 }
 
-class Engine private(sys: TransitionSystem, noInit: Boolean) {
+class Engine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val inputs = sys.inputs.map(i => i.name -> i).toMap
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
-  private implicit val ctx = new SymbolicContext()
+  private implicit val ctx = new SymbolicContext(opts)
 
   def signalAt(name: String, step: Int): BVValueSummary = {
     if(results.size < step + 1) {
