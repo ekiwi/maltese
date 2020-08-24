@@ -8,6 +8,9 @@ object SMTSimplifier {
 
   /** Recursively simplifies expressions from bottom to top. */
   def simplify(expr: SMTExpr): SMTExpr = expr.mapExpr(simplify) match {
+    // constant folding
+    case u : BVUnaryExpr if isLit(u.e) => constantFold(u)
+    case b : BVBinaryExpr if isLit(b.a) && isLit(b.b)  => constantFold(b)
     case op: BVOp => simplifyOp(op)
     case eq: BVEqual => simplifyBVEqual(eq)
     case BVExtend(e, 0, _) => e
@@ -15,6 +18,11 @@ object SMTSimplifier {
     case BVNot(BVNot(e)) => e
     case ite: BVIte => simplifyBVIte(ite)
     case other => other
+  }
+
+  private def isLit(e: SMTExpr): Boolean = e match {
+    case BVLiteral(_, _) => true
+    case _ => false
   }
 
   private def simplifyBVEqual(expr: BVEqual): BVExpr = (expr.a, expr.b) match {
@@ -80,8 +88,6 @@ object SMTSimplifier {
     case BVSlice(e, hi, 0) if hi == e.width - 1 => e
     // slice of slice
     case BVSlice(BVSlice(e, _, innerLo), hi, lo) => combineSlice(e, innerLo, hi=hi, lo=lo)
-    // slice of a literal
-    case BVSlice(BVLiteral(value, _), hi, lo) => BVLiteral(SMTExprEval.doBVSlice(value, hi=hi, lo=lo), expr.width)
     // slice of concat (this can enable new simplifications)
     // TODO: we can probably make this a bit more performant by only performing top-down instead of bottom up
     //       simplifications since the leaves are already simplified.
@@ -110,6 +116,32 @@ object SMTSimplifier {
         BVSlice(lsb, lsb.width - 1, lo)
       )
     }
+  }
+
+  private def constantFold(expr: BVUnaryExpr): BVLiteral = {
+    // we cannot use pattern matching here since it does not support BigInts
+    val value = expr.e.asInstanceOf[BVLiteral].value
+    val r: BigInt = expr match {
+      case BVExtend(BVLiteral(_, width), by, signed) => SMTExprEval.doBVExtend(value, width, by, signed)
+      case BVSlice(_, hi, lo) => SMTExprEval.doBVSlice(value, hi=hi, lo=lo)
+      case BVNot(_) => SMTExprEval.doBVNot(value, expr.width)
+      case BVNegate(_) => SMTExprEval.doBVNegate(value, expr.width)
+    }
+    BVLiteral(r, expr.width)
+  }
+
+  private def constantFold(expr: BVBinaryExpr): BVLiteral = {
+    // we cannot use pattern matching here since it does not support BigInts
+    val a = expr.a.asInstanceOf[BVLiteral].value
+    val b = expr.b.asInstanceOf[BVLiteral].value
+
+    val r: BigInt = expr match {
+      case _: BVEqual => SMTExprEval.doBVEqual(a, b)
+      case BVOp(op, _, _) => SMTExprEval.doBVOp(op, a, b, expr.width)
+      case BVComparison(op, _, _, signed) => SMTExprEval.doBVCompare(op, a, b, expr.a.width, signed)
+      case _: BVConcat => SMTExprEval.doBVConcat(a, b, bWidth = expr.b.width)
+    }
+    BVLiteral(r, expr.width)
   }
 
   private def and(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)

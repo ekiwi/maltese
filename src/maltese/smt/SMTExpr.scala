@@ -33,7 +33,11 @@ case class BVLiteral(value: BigInt, width: Int) extends BVExpr with SMTNullaryEx
   assert(width > 0, "Zero or negative width literals are not allowed!")
   assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
 }
-
+object BVLiteral {
+  def apply(nums: String): BVLiteral = nums.head match {
+    case 'b' => BVLiteral(BigInt(nums.drop(1), 2), nums.length - 1)
+  }
+}
 case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
   assert(!name.contains("|"), s"Invalid id $name contains escape character `|`")
   // assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
