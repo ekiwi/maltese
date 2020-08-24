@@ -17,3 +17,8 @@
 
 # treadle
 *.vcd
+
+# hprof profiling
+/*.hprof
+/*.txt
+/*.svg
