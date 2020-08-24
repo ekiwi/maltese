@@ -91,7 +91,7 @@ object SMTSimplifier {
     case other => other
   }
 
-  private val MaxRanges = 4
+  private val MaxRanges = 16
   private def simplifyBitMask(old: BVExpr, expr: BVExpr, mask: BigInt): BVExpr = {
     val ranges = maskToRanges(mask, old.width)
     if(ranges.size > MaxRanges) { old } else {
