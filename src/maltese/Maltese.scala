@@ -13,8 +13,9 @@ import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
 object MalteseApp extends App {
   if(args.length < 1) {
     // println(s"please provide the name of a btor file")
+    val d = "benchmarks/hwmcc19/bv/goel/crafted/toy_lock_4.btor2"
     //val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
-    val d = "benchmarks/hwmcc19/bv/wolf/2019A/picorv32_mutBX_nomem-p0.btor"
+    //val d = "benchmarks/hwmcc19/bv/wolf/2019A/picorv32_mutBX_nomem-p0.btor"
     Maltese.load(d)
   } else {
     Maltese.load(args.head)
@@ -33,7 +34,7 @@ object Maltese {
 
     Simplify,
 
-    PrintSystem,
+    // PrintSystem,
   )
 
   def load(filename: String): Unit = {
@@ -44,44 +45,46 @@ object Maltese {
 
     val simplified = simplifySystem(sys)
 
-    getConstraints(simplified, doInit = false)
+    //val e = getConstraints(simplified, doInit = false)
+    val e = check(simplified, kMax = 1)
+    //val e = check(sys)
 
-    //check(simplified)
-    //check(sys)
-
-
+    println()
+    e.printStatistics()
   }
 
   def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = true)
 
-  def check(sys: TransitionSystem): Unit = {
-    val e = Engine(sys, noInit = true)
+  def check(sys: TransitionSystem, kMax: Int = 2, doInit: Boolean = true): Engine = {
+    val e = Engine(sys, noInit = !doInit)
 
     val bad = sys.signals.filter(_.lbl == IsBad).map(_.name)
     bad.foreach { b =>
-      (0 until 1).foreach { step =>
+      (0 to kMax).foreach { step =>
         val r = e.signalAt(b, step)
         println(s"$b@$step: $r")
       }
     }
+
+    e
   }
 
 
-  def getConstraints(sys: TransitionSystem, doInit: Boolean): Unit = {
-    val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = false)
+  def getConstraints(sys: TransitionSystem, doInit: Boolean): Engine = {
+    val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = true)
     val e = Engine(sys, !doInit, opts)
     val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
-    const.take(2).foreach { c =>
+    const.take(105).zipWithIndex.foreach { case (c, i) =>
+      print(s"$i.")
       val step = 0
       val r = e.signalAt(c, step)
-      val rString = r.toString
+      /*val rString = r.toString
       if(rString.length < 200) {
         println(s"$c@$step: $rString")
       } else {
         println(s"skipping $c@$step because the resulting string is too big")
-      }
+      }*/
     }
-    e.printStatistics()
-
+    e
   }
 }
