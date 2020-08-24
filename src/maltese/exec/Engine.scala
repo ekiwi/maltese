@@ -76,4 +76,8 @@ class Engine private(sys: TransitionSystem, noInit: Boolean) {
     BVValueSummary(sym)
   }
   private def symbols = mutable.HashMap[String, BVSymbol]()
+
+  def printStatistics(): Unit = {
+    ctx.printStatistics()
+  }
 }

@@ -53,4 +53,9 @@ class SymbolicContext(
   def bddToSmt(bdd: BDD): BVExpr = bddConverter.bddToSmt(bdd)
   val tru: BDD = bddConverter.tru
 
+
+  def printStatistics(): Unit = {
+    println("Atoms: " + bddConverter.getCacheSize)
+  }
+
 }

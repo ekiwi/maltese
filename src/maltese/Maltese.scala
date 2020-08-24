@@ -8,11 +8,14 @@ import java.io.File
 
 import maltese.exec.Engine
 import maltese.passes._
-import maltese.smt.{IsBad, TransitionSystem}
+import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
 
 object MalteseApp extends App {
   if(args.length < 1) {
-    println(s"please provide the name of a btor file")
+    // println(s"please provide the name of a btor file")
+    //val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
+    val d = "benchmarks/hwmcc19/bv/wolf/2019A/picorv32_mutBX_nomem-p0.btor"
+    Maltese.load(d)
   } else {
     Maltese.load(args.head)
   }
@@ -41,7 +44,9 @@ object Maltese {
 
     val simplified = simplifySystem(sys)
 
-    check(simplified)
+    getConstraints(simplified, doInit = false)
+
+    //check(simplified)
     //check(sys)
 
 
@@ -59,5 +64,23 @@ object Maltese {
         println(s"$b@$step: $r")
       }
     }
+  }
+
+
+  def getConstraints(sys: TransitionSystem, doInit: Boolean): Unit = {
+    val e = Engine(sys, noInit = !doInit)
+    val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
+    const.take(2).foreach { c =>
+      val step = 0
+      val r = e.signalAt(c, step)
+      val rString = r.toString
+      if(rString.length < 200) {
+        println(s"$c@$step: $rString")
+      } else {
+        println(s"skipping $c@$step because the resulting string is too big")
+      }
+    }
+    e.printStatistics()
+
   }
 }
