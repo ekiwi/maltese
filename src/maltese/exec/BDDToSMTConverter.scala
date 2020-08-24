@@ -34,8 +34,13 @@ class BDDToSMTConverter(
         case _ => None
       }
 
-      if (bdds.varNum() <= bddVarCount) {
-        bdds.setVarNum(bddVarCount + 1)
+      val availableVariables = bdds.varNum()
+      if (availableVariables <= bddVarCount) {
+        val newVariableNum = List(availableVariables * 2, 2).max
+        bdds.setVarNum(newVariableNum)
+        if(bddVarCount > 6000) {
+          println(s"WARN Number of BDD variables: $availableVariables -> $newVariableNum")
+        }
       }
       smtToBddCache(expr) = bdds.ithVar(bddVarCount)
       bddLiteralToSmt(bddVarCount) = expr
