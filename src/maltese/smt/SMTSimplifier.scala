@@ -71,7 +71,15 @@ object SMTSimplifier {
     case _ => i
   }
 
-  private def simplifyOp(expr: BVOp): BVExpr = expr match {
+  private def simplifyOp(expr: BVOp): BVExpr = {
+    if(expr.width == 1) { simplifyBoolOp(expr) } else { expr match {
+      case BVOp(Op.And, a, mask: BVLiteral) => simplifyBitMask(expr, a, mask.value)
+      case BVOp(Op.And, mask: BVLiteral, a) => simplifyBitMask(expr, a, mask.value)
+      case other => other
+    }}
+  }
+
+  private def simplifyBoolOp(expr: BVOp): BVExpr = expr match {
     case BVOp(Op.And, a, True()) => a
     case BVOp(Op.And, True(), b) => b
     case BVOp(Op.And, _, False()) => BVLiteral(0, 1)
@@ -81,6 +89,32 @@ object SMTSimplifier {
     case BVOp(Op.Or, a, False()) => a
     case BVOp(Op.Or, False(), b) => b
     case other => other
+  }
+
+  private val MaxRanges = 4
+  private def simplifyBitMask(old: BVExpr, expr: BVExpr, mask: BigInt): BVExpr = {
+    val ranges = maskToRanges(mask, old.width)
+    if(ranges.size > MaxRanges) { old } else {
+      ranges.reverseIterator.map {
+        case (msb, lsb, true) => simplify(BVSlice(expr, hi=msb, lo=lsb)).asInstanceOf[BVExpr]
+        case (msb, lsb, false) => BVLiteral(0, msb - lsb + 1)
+      }.reduce((a, b) => BVConcat(a, b))
+    }
+  }
+
+  private def maskToRanges(mask: BigInt, width: Int): Seq[(Int, Int, Boolean)] =
+  if(width == 0) { List() } else if(width == 1) { List((0, 0, mask == 1)) } else {
+    var lsb: Int = 0
+    var lastBit: Boolean = (mask & 1) == 1
+    (1 until width).flatMap { ii =>
+      val bit = ((BigInt(1) << ii) & mask) != 0
+      if(lastBit == bit) { None } else {
+        val r = (ii-1, lsb, lastBit)
+        lastBit = bit
+        lsb = ii
+        Some(r)
+      }
+    } :+ (width - 1, lsb, lastBit)
   }
 
   private def simplifySlice(expr: BVSlice): BVExpr = expr match {

@@ -82,6 +82,18 @@ class SMTSimplifierSpec extends SMTSimplifierBaseSpec {
     assert(simplify(BVEqual(c, BVConcat(BVConcat(a1, a0), b))).toString ==
       "and(and(eq(a1, c[4]), eq(a0, c[3])), eq(b, c[2:0]))")
   }
+
+  it should "simplify bit masks, i.e. bitwise and with a constant" in {
+    val (a, b) = (bv("a", 2), bv("b", 3))
+
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b11000"))).toString == "concat(a, 3'b0)")
+
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b10000"))).toString == "concat(a[1], 4'b0)")
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b01000"))).toString == "concat(concat(1'b0, a[0]), 3'b0)")
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b00100"))).toString == "concat(concat(2'b0, b[2]), 2'b0)")
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b00010"))).toString == "concat(concat(3'b0, b[1]), 1'b0)")
+    assert(simplify(BVOp(Op.And, BVConcat(a, b), BVLiteral("b00001"))).toString == "concat(4'b0, b[0])")
+  }
 }
 
 abstract class SMTSimplifierBaseSpec extends AnyFlatSpec {
