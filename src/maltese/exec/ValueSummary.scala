@@ -85,7 +85,8 @@ object BVValueSummary {
 
   private def importIntoGuard(ctx: SymbolicContext, entries: List[BVEntry]): List[BVEntry] = {
     val tru = entries.map(e => e.guard.and(ctx.smtToBdd(e.value))).reduce((a,b) => a.or(b))
-    val newEntries = List(BVEntry(tru, True()), BVEntry(tru.not(), False())).filterNot(_.guard.isZero)
+    // putting the false entry first gives us a nicer print out when converting to SMT and serializing in `toString`
+    val newEntries = List(BVEntry(tru.not(), False()), BVEntry(tru, True())).filterNot(_.guard.isZero)
     assert(newEntries.nonEmpty)
     newEntries
   }
@@ -113,7 +114,7 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   def isTrue: Boolean = entries.size == 1 && entries.head.value == True()
   def isFalse: Boolean = entries.size == 1 && entries.head.value == False()
   override def toString = if(size < 100) {
-    BVValueSummary.toSMT(this).toString
+    SMTSimplifier.simplify(BVValueSummary.toSMT(this)).toString
   } else { s"ValueSummary w/ $size entries" }
   override def size = entries.size
 }
