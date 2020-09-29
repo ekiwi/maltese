@@ -19,6 +19,10 @@ class Engine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
   private implicit val ctx = new SymbolicContext(opts)
 
+  /** WARN: there is no way to "unassume" things! */
+  def assumeTrueAt(name: String, step: Int): Unit = assumeAt(name, step, invert = false)
+  def assumeFalseAt(name: String, step: Int): Unit = assumeAt(name, step, invert = true)
+
   def signalAt(name: String, step: Int): BVValueSummary = {
     if(results.size < step + 1) {
       (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
@@ -33,6 +37,13 @@ class Engine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     }
     // println(s"$name@$step: $r")
     r
+  }
+
+  private def assumeAt(name: String, step: Int, invert: Boolean): Unit = {
+    val pred = signalAt(name, step)
+    assert(pred.width == 1)
+    val assumption = if(invert) BVValueSummary.unary(pred, BVNot) else pred
+    ctx.
   }
 
   private def computeSignalAt(name: String, step: Int): BVValueSummary = {

@@ -6,14 +6,16 @@ package maltese
 
 import java.io.File
 
-import maltese.exec.{Engine, Options}
+import maltese.exec._
 import maltese.passes._
-import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
+import maltese.smt._
 
 object MalteseApp extends App {
   if(args.length < 1) {
     // println(s"please provide the name of a btor file")
-    val d = "benchmarks/hwmcc19/bv/goel/crafted/toy_lock_4.btor2"
+
+    val d = "benchmarks/hwmcc19/bv/wolf/2018A/zipcpu-busdelay-p18.btor" // 02, 18, 24, 30, 36, 43, 46, 47
+    //val d = "benchmarks/hwmcc19/bv/goel/crafted/toy_lock_4.btor2"
     //val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
     //val d = "benchmarks/hwmcc19/bv/wolf/2019A/picorv32_mutBX_nomem-p0.btor"
     Maltese.load(d)
@@ -45,8 +47,8 @@ object Maltese {
 
     val simplified = simplifySystem(sys)
 
-    //val e = getConstraints(simplified, doInit = false)
-    val e = check(simplified, kMax = 1)
+    val e0 = getConstraints(simplified, doInit = false)
+    val e = check(simplified, kMax = 3, doInit = false)
     //val e = check(sys)
 
     println()
@@ -74,17 +76,23 @@ object Maltese {
     val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = true)
     val e = Engine(sys, !doInit, opts)
     val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
-    const.take(105).zipWithIndex.foreach { case (c, i) =>
-      print(s"$i.")
-      val step = 0
+    val values = const.take(105).zipWithIndex.map { case (c, i) =>
+      //print(s"$i.")
+      val step = 1
       val r = e.signalAt(c, step)
-      /*val rString = r.toString
-      if(rString.length < 200) {
+      val rString = r.toString
+      if(rString.length < 1000) {
         println(s"$c@$step: $rString")
       } else {
         println(s"skipping $c@$step because the resulting string is too big")
-      }*/
+      }
+      r
     }
+
+    // this seems to blow up
+    // val all = values.reduce((a, b) => BVValueSummary.binary(a, b, BVOp(Op.And, _, _)))
+    // println(s"all: $all")
+
     e
   }
 }
