@@ -2,7 +2,7 @@
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
-package maltese.exec
+package maltese.sym
 
 import maltese.smt.solvers.{Solver, Yices2}
 import net.sf.javabdd.{BDDFactory, JFactory}

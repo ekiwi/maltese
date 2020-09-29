@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.exec.{SymEngine, Options}
+import maltese.sym.{SymEngine, Options}
 import maltese.passes._
 import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
 
