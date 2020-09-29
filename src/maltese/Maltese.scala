@@ -6,7 +6,7 @@ package maltese
 
 import java.io.File
 
-import maltese.exec.{Engine, Options}
+import maltese.exec.{SymEngine, Options}
 import maltese.passes._
 import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
 
@@ -55,8 +55,8 @@ object Maltese {
 
   def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = true)
 
-  def check(sys: TransitionSystem, kMax: Int = 2, doInit: Boolean = true): Engine = {
-    val e = Engine(sys, noInit = !doInit)
+  def check(sys: TransitionSystem, kMax: Int = 2, doInit: Boolean = true): SymEngine = {
+    val e = SymEngine(sys, noInit = !doInit)
 
     val bad = sys.signals.filter(_.lbl == IsBad).map(_.name)
     bad.foreach { b =>
@@ -70,9 +70,9 @@ object Maltese {
   }
 
 
-  def getConstraints(sys: TransitionSystem, doInit: Boolean): Engine = {
+  def getConstraints(sys: TransitionSystem, doInit: Boolean): SymEngine = {
     val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = true)
-    val e = Engine(sys, !doInit, opts)
+    val e = SymEngine(sys, !doInit, opts)
     val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
     const.take(105).zipWithIndex.foreach { case (c, i) =>
       print(s"$i.")

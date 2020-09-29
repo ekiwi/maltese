@@ -7,12 +7,12 @@ package maltese.exec
 import maltese.smt._
 import scala.collection.mutable
 
-object Engine {
-  def apply(sys: TransitionSystem, noInit: Boolean = false, opts: Options = Options.Default): Engine =
-    new Engine(sys, noInit, opts)
+object SymEngine {
+  def apply(sys: TransitionSystem, noInit: Boolean = false, opts: Options = Options.Default): SymEngine =
+    new SymEngine(sys, noInit, opts)
 }
 
-class Engine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
+class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val inputs = sys.inputs.map(i => i.name -> i).toMap
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
