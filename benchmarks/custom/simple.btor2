@@ -1,0 +1,14 @@
+1 sort bitvec 1
+2 sort bitvec 3
+3 zero 2
+4 state 2 cnt
+5 init 2 4 3
+6 input 2 in
+7 add 2 4 6
+8 next 2 4 7
+9 ones 2
+10 eq 1 4 9
+11 bad 10
+12 constd 2 3
+13 ulte 1 6 12
+14 constraint 13

@@ -9,7 +9,8 @@ object FuzzerApp extends App {
   if(args.length < 1) {
     // println(s"please provide the name of a btor file")
 //    val d = "benchmarks/hwmcc19/bv/goel/crafted/toy_lock_4.btor2"
-    val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
+    val d = "benchmarks/custom/simple.btor2"
+//    val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
     //val d = "benchmarks/hwmcc19/bv/wolf/2019A/picorv32_mutBX_nomem-p0.btor"
     Fuzzer.load(d)
   } else {
