@@ -2,6 +2,7 @@ package maltese
 
 import maltese.smt._
 import SMTExprEval._
+import scala.math.log10
 
 import scala.io.StdIn.readLine
 
@@ -22,7 +23,7 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem) {
   def execute(): Boolean = {
     //prompt user for input
     for (input <- simplifiedSystem.inputs) {
-      memoryMap(input.name) = inputPrompt(input.name)
+      memoryMap(input.name) = inputPrompt(input)
     }
 
     // check constraints
@@ -76,14 +77,25 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem) {
 
   private def initState(state: State, inits: Map[String, Signal]): BigInt = { // will init state always be BigInt?
     state.init match {
-      case i: Some[BVSymbol] => if (inits.contains(i.value.name)) eval(inits(i.value.name).e) else inputPrompt(state.sym.name)
-      case _ => inputPrompt(state.sym.name)
+      case i: Some[BVSymbol] => if (inits.contains(i.value.name)) eval(inits(i.value.name).e) else inputPrompt(state.asInstanceOf[BVSymbol]) // this is probably a bad assumption?
+      case _ => inputPrompt(state.asInstanceOf[BVSymbol])
     }
 
   }
 
-  private def inputPrompt(inputName: String): BigInt = { // how to best implement width-checking?
-    printf("Input value for %s: ", inputName)
-    BigInt(readLine.toInt)
+  private def inputPrompt(input: BVSymbol): BigInt = { // how to best implement width-checking?
+    var flag = false
+    var toRet: BigInt = 0
+    do {
+      if (flag) {
+        printf("Input value must have width of at most %d\n", input.width)
+      }
+      printf("Input value for %s: ", input.name)
+      toRet = BigInt(readLine.toInt)
+    } while({
+      flag = (log10(toRet.toDouble)/log10(2) + 1).toInt > input.width
+      flag
+    })
+    toRet
   }
 }
