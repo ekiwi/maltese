@@ -5,50 +5,85 @@ import SMTExprEval._
 
 import scala.io.StdIn.readLine
 
+// General Questions:
+// Unfamiliar with all SignalLabel types
+
 class ExecutionEngine(val simplifiedSystem: TransitionSystem) {
   private var memoryMap = collection.mutable.Map[String, BigInt]()
   memoryMap ++= simplifiedSystem.inputs.map(input => input.name -> BigInt(0))
   memoryMap ++= {
     val inits = simplifiedSystem.signals.filter(_.lbl.equals(IsInit)).map(init => init.name -> init).toMap
-    simplifiedSystem.states.map(state => state.sym.name -> initState(state.sym.name, inits))
+    simplifiedSystem.states.map(state => state.sym.name -> initState(state, inits))
   }
   private val constraints = simplifiedSystem.signals.filter(_.lbl.equals(IsConstraint))
   private val badStates = simplifiedSystem.signals.filter(_.lbl.equals(IsBad))
   private val transitions = simplifiedSystem.signals.filter(_.lbl.equals(IsNext))
 
-  def execute() = {
+  def execute(): Boolean = {
     //prompt user for input
+    for (input <- simplifiedSystem.inputs) {
+      memoryMap(input.name) = inputPrompt(input.name)
+    }
 
     // check constraints
+    for (cons <- constraints) { // should constraints be checked before execution?
+      val check = eval(cons.e)
+      if (check == 0) {
+        return false
+      }
+    }
 
     // execute transitions
+    for (trans <- transitions) {
+      memoryMap(trans.name) = eval(trans.e)
+    }
+
+    //update states
+    for (state <- simplifiedSystem.states) {
+      state.next match {
+        case s: Some[BVSymbol] => memoryMap(state.sym.name) = memoryMap(s.value.name)
+        case _ => printf("No Next Param for %s\n", state.sym.name)
+      }
+    }
 
     // check bad states
+    for (bad <- badStates) {
+      val check = eval(bad.e)
+      if (check != 0) {
+        return false
+      }
+    }
+
+    //return true if everything went well
+    true
   }
 
-  def eval(expr: SMTExpr): BigInt = {
+  private def eval(expr: SMTExpr): BigInt = {
     expr match {
       case e: BVLiteral => e.value
       case e: BVSymbol => memoryMap(e.name)
-      case e: BVOp => doBVOp(e.op, eval(e.a), eval(e.b), e.width)
       case e: BVExtend => doBVExtend(eval(e.e), e.width, e.by, e.signed)
-      case e: BVEqual => doBVEqual(eval(e.a), eval(e.b))
+      case e: BVSlice => doBVSlice(eval(e.e), e.hi, e.lo)
       case e: BVNot => doBVNot(eval(e.e), e.width)
+      case e: BVNegate => doBVNegate(eval(e.e), e.width)
+      case e: BVEqual => doBVEqual(eval(e.a), eval(e.b))
       case e: BVComparison => doBVCompare(e.op, eval(e.a), eval(e.b), e.width, e.signed)
+      case e: BVOp => doBVOp(e.op, eval(e.a), eval(e.b), e.width)
+      case e: BVConcat => doBVConcat(eval(e.a), eval(e.b), e.width)
       case _ => 10/0 //TODO: Add proper error
     }
   }
 
-  def initState(state: String, inits: Map[String, Signal]): BigInt = { // will init state always be BigInt?
-    if (inits.contains(state+".init")) {
-      val expr = inits(state+".init").e
-      return eval(expr)
+  private def initState(state: State, inits: Map[String, Signal]): BigInt = { // will init state always be BigInt?
+    state.init match {
+      case i: Some[BVSymbol] => if (inits.contains(i.value.name)) eval(inits(i.value.name).e) else inputPrompt(state.sym.name)
+      case _ => inputPrompt(state.sym.name)
     }
-    inputPrompt()
+
   }
 
-  def inputPrompt(): BigInt = { // how to best implement width-checking?
-    print("Input a value: ")
+  private def inputPrompt(inputName: String): BigInt = { // how to best implement width-checking?
+    printf("Input value for %s: ", inputName)
     BigInt(readLine.toInt)
   }
 }
