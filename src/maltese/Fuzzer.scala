@@ -18,6 +18,7 @@ object FuzzerApp extends App {
     system = Fuzzer.load(args.head)
   }
   val exe = new ExecutionEngine(system)
+  while(exe.execute()){}
 }
 
 object Fuzzer {
