@@ -4,7 +4,9 @@
 
 package maltese.sym
 
+import maltese.mc.TransitionSystem
 import maltese.smt._
+
 import scala.collection.mutable
 
 object SymEngine {

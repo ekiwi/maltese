@@ -4,7 +4,7 @@
 
 package maltese.passes
 
-import maltese.smt.TransitionSystem
+import maltese.mc.TransitionSystem
 
 /** Prints the system to stdout without modifying it */
 object PrintSystem extends Pass {

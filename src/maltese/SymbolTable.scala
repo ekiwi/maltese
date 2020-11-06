@@ -9,7 +9,7 @@ class SymbolTable private(nameToId: Seq[(String, Int)]) {
 }
 
 object SymbolTable {
-  def scan(sys: smt.TransitionSystem): SymbolTable = {
+  def scan(sys: mc.TransitionSystem): SymbolTable = {
     new SymbolTable(Seq())
   }
 }

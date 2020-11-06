@@ -4,6 +4,8 @@
 
 package maltese.smt
 
+import maltese.mc._
+
 import org.scalatest.flatspec.AnyFlatSpec
 
 

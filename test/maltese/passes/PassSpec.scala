@@ -4,7 +4,7 @@
 
 package maltese.passes
 
-import maltese.smt.{Btor2, TransitionSystem}
+import maltese.mc.{Btor2, TransitionSystem}
 import org.scalatest.flatspec.AnyFlatSpec
 
 abstract class PassSpec(pass: Pass) extends AnyFlatSpec{

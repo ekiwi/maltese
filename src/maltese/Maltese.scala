@@ -8,7 +8,7 @@ import java.io.File
 
 import maltese.sym.{SymEngine, Options}
 import maltese.passes._
-import maltese.smt.{IsBad, IsConstraint, TransitionSystem}
+import maltese.mc.{IsBad, IsConstraint, TransitionSystem}
 
 object MalteseApp extends App {
   if(args.length < 1) {
@@ -25,11 +25,11 @@ object MalteseApp extends App {
 object Maltese {
   private val passes: Iterable[Pass] = Seq(
     Simplify,
-    Inline,
+    new Inline,
     DeadCodeElimination,
 
     Simplify,
-    Inline,
+    new Inline,
     DeadCodeElimination,
 
     Simplify,
@@ -39,7 +39,7 @@ object Maltese {
 
   def load(filename: String): Unit = {
     // load transition system from file
-    val sys = smt.Btor2.load(new File(filename))
+    val sys = mc.Btor2.load(new File(filename))
 
     println(s"Loaded $filename")
 

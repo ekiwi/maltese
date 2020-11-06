@@ -4,7 +4,7 @@
 
 package maltese.passes
 
-class InlineSpec extends PassSpec(Inline) {
+class InlineSpec extends PassSpec(new Inline) {
 
   it should "not inline a signal with more than one use" in {
     val src =
