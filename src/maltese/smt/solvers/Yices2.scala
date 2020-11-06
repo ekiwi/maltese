@@ -24,6 +24,7 @@ object Yices2 {
 
 class Yices2 private(lib: Yices2Api, conf: Yices2Api.ConfigT, ctx: Yices2Api.ContextT, params: Yices2Api.ParamsT) extends Solver {
   override def name = "yices2"
+  override def supportsQuantifiers = false
   override def supportsConstArrays = false
   override def supportsUninterpretedFunctions = true
 
@@ -41,6 +42,19 @@ class Yices2 private(lib: Yices2Api, conf: Yices2Api.ConfigT, ctx: Yices2Api.Con
       assertNoError(lib.yices_get_bv_value(m, info.term, valueArray))
       bitArrayToBigInt(valueArray)
     }
+  }
+
+  // TODO
+  override def getValue(e: BVExpr) = ???
+  override def getValue(e: ArrayExpr) = ???
+
+  override def runCommand(cmd: SMTCommand): Unit = cmd match {
+    case Comment(_) => // ignore
+    case SetLogic(logic) => setLogic(logic)
+    case DefineFunction(name, args, e) => ???
+    case DeclareFunction(sym, args) => ???
+    case DeclareUninterpretedSort(name) => ???
+    case DeclareUninterpretedSymbol(name, tpe) => ???
   }
 
   /** releases all native resources */
@@ -152,6 +166,8 @@ class Yices2 private(lib: Yices2Api, conf: Yices2Api.ConfigT, ctx: Yices2Api.Con
       if(a.width == 1) { toBool(r) } else { r }
     case BVConcat(a, b) =>
       assertNoError(lib.yices_bvconcat2(convertToBV(a), convertToBV(b)))
+    case BVImplies(a, b) =>
+      assertNoError(lib.yices_implies(convert(a), convert(b)))
     case ArrayRead(a, b) =>
       throw new NotImplementedError("TODO: support array expressions")
     // ternary

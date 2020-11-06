@@ -4,7 +4,7 @@
 
 package maltese.passes
 
-import maltese.smt._
+import maltese.mc
 
 
 object PassManager {
@@ -13,7 +13,7 @@ object PassManager {
 
 
 class PassManager private(val passes: Iterable[Pass]) {
-  def run(sys: TransitionSystem, trace: Boolean = false): TransitionSystem = {
+  def run(sys: mc.TransitionSystem, trace: Boolean = false): mc.TransitionSystem = {
     passes.foldLeft(sys) { case (sys, pass) =>
       val next = pass.run(sys)
       if(trace) {

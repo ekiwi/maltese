@@ -19,11 +19,13 @@ object SMTExprMap {
     // nullary
     case old : BVLiteral => old
     case old : BVSymbol => old
+    case old : UTSymbol => old
     // unary
     case old @ BVExtend(e, by, signed) => val n = bv(e) ; if(n.eq(e)) old else BVExtend(n, by, signed)
     case old @ BVSlice(e, hi, lo) => val n = bv(e) ; if(n.eq(e)) old else BVSlice(n, hi, lo)
     case old @ BVNot(e) => val n = bv(e) ; if(n.eq(e)) old else BVNot(n)
     case old @ BVNegate(e) => val n = bv(e) ; if(n.eq(e)) old else BVNegate(n)
+    case old @ BVForall(variables, e) => val n = bv(e) ; if(n.eq(e)) old else BVForall(variables, n)
     // binary
     case old @ BVEqual(a, b) =>
       val (nA, nB) = (bv(a), bv(b)) ; if(nA.eq(a) && nB.eq(b)) old else BVEqual(nA, nB)
@@ -37,6 +39,8 @@ object SMTExprMap {
       val (nA, nB) = (bv(a), bv(b)) ; if(nA.eq(a) && nB.eq(b)) old else BVConcat(nA, nB)
     case old @ ArrayRead(a, b) =>
       val (nA, nB) = (ar(a), bv(b)) ; if(nA.eq(a) && nB.eq(b)) old else ArrayRead(nA, nB)
+    case old @ BVImplies(a, b) =>
+      val (nA, nB) = (bv(a), bv(b)) ; if(nA.eq(a) && nB.eq(b)) old else BVImplies(nA, nB)
     // ternary
     case old @ BVIte(a, b, c) =>
       val (nA, nB, nC) = (bv(a), bv(b), bv(c))
@@ -46,6 +50,10 @@ object SMTExprMap {
       val nChoices = choices.map(c => (bv(c._1), bv(c._2)))
       val anyNew = nChoices.zip(choices).exists{ case (n, o) => !n._1.eq(o._1) || !n._2.eq(o._2) }
       if(anyNew) BVSelect(nChoices) else old
+    case old @ BVFunctionCall(name, args, width) =>
+      val nArgs = args.map { case b: BVExpr => bv(b) case a: ArrayExpr => ar(a) case u: UTSymbol => u}
+      val anyNew = nArgs.zip(args).exists{ case (n, o) => !n.eq(o) }
+      if(anyNew) BVFunctionCall(name, nArgs, width) else old
   }
 
   /** maps bv/ar over subexpressions of expr and returns expr with the results replaced */
@@ -58,5 +66,9 @@ object SMTExprMap {
     case old @ ArrayIte(a, b, c) =>
       val (nA, nB, nC) = (bv(a), ar(b), ar(c))
       if(nA.eq(a) && nB.eq(b) && nC.eq(c)) old else ArrayIte(nA, nB, nC)
+    case old @ ArrayFunctionCall(name, args, indexWidth, dataWidth) =>
+      val nArgs = args.map { case b: BVExpr => bv(b) case a: ArrayExpr => ar(a) case u: UTSymbol => u }
+      val anyNew = nArgs.zip(args).exists{ case (n, o) => !n.eq(o) }
+      if(anyNew) ArrayFunctionCall(name, nArgs, indexWidth, dataWidth) else old
   }
 }

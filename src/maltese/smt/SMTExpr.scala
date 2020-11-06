@@ -4,7 +4,7 @@
 
 package maltese.smt
 
-sealed trait SMTExpr {
+sealed trait SMTExpr extends SMTFunctionArg {
   def tpe: SMTType
   def children: List[SMTExpr]
   def foreachExpr(f: SMTExpr => Unit): Unit = children.foreach(f)
@@ -13,6 +13,7 @@ sealed trait SMTExpr {
 sealed trait SMTSymbol extends SMTExpr with SMTNullaryExpr {
   val name: String
   def toStringWithType: String
+  def rename(newName: String): SMTSymbol
 }
 object SMTSymbol {
   def fromExpr(name: String, e: SMTExpr): SMTSymbol = e match {
@@ -45,6 +46,7 @@ case class BVSymbol(name: String, width: Int) extends BVExpr with SMTSymbol {
   // assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
   assert(width > 0, "Zero width bit vectors are not supported!")
   override def toStringWithType: String = name + " : " + SMTExpr.serializeType(this)
+  override def rename(newName: String) = BVSymbol(newName, width)
 }
 
 sealed trait BVUnaryExpr extends BVExpr {
@@ -84,6 +86,13 @@ case class BVEqual(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   assert(a.width == b.width, s"Both argument need to be the same width!")
   override def width: Int = 1
   override def reapply(nA: BVExpr, nB: BVExpr) = BVEqual(nA, nB)
+}
+// added as a separate node because it is used a lot in model checking and benefits from pretty printing
+case class BVImplies(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
+  assert(a.width == 1, s"The antecedent needs to be a boolean expression!")
+  assert(b.width == 1, s"The consequent needs to be a boolean expression!")
+  override def width: Int = 1
+  override def reapply(nA: BVExpr, nB: BVExpr) = BVImplies(nA, nB)
 }
 object Compare extends Enumeration {
   val Greater, GreaterEqual = Value
@@ -139,6 +148,9 @@ case class BVSelect(choices: List[(BVExpr, BVExpr)]) extends BVExpr {
   override def children: List[SMTExpr] = choices.flatMap(c => List(c._1, c._2))
 }
 
+// uninterpreted functions over bitvectors
+case class BVFunctionSymbol(name: String, domainWidth: List[Int], width: Int)
+
 sealed trait ArrayExpr extends SMTExpr {
   val indexWidth: Int
   val dataWidth: Int
@@ -149,6 +161,7 @@ case class ArraySymbol(name: String, indexWidth: Int, dataWidth: Int) extends Ar
   assert(!name.contains("|"),  s"Invalid id $name contains escape character `|`")
   assert(!name.contains("\\"), s"Invalid id $name contains `\\`")
   override def toStringWithType: String = s"$name : bv<$indexWidth> -> bv<$dataWidth>"
+  override def rename(newName: String) = ArraySymbol(newName, indexWidth, dataWidth)
 }
 case class ArrayConstant(e: BVExpr, indexWidth: Int) extends ArrayExpr {
   override val dataWidth: Int = e.width
@@ -176,6 +189,41 @@ case class ArrayIte(cond: BVExpr, tru: ArrayExpr, fals: ArrayExpr) extends Array
   override val dataWidth: Int = tru.dataWidth
   override val indexWidth: Int = tru.indexWidth
   override def children:   List[SMTExpr] = List(cond, tru, fals)
+}
+
+case class BVForall(variable: BVSymbol, e: BVExpr) extends BVUnaryExpr {
+  assert(e.width == 1, "Can only quantify over boolean expressions!")
+  override def width = 1
+  override def reapply(expr: BVExpr) = BVForall(variable, expr)
+}
+
+/** apply arguments to a function which returns a result of bit vector type */
+case class BVFunctionCall(name: String, args: List[SMTFunctionArg], width: Int) extends BVExpr {
+  override def children = args.map(_.asInstanceOf[SMTExpr])
+}
+/** apply arguments to a function which returns a result of array type */
+case class ArrayFunctionCall(name: String, args: List[SMTFunctionArg], indexWidth: Int, dataWidth: Int) extends ArrayExpr {
+  override def children = args.map(_.asInstanceOf[SMTExpr])
+}
+sealed trait SMTFunctionArg
+// we allow symbols with uninterpreted type to be function arguments
+case class UTSymbol(name: String, tpe: String) extends SMTFunctionArg
+
+object BVAnd {
+  def apply(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)
+  def apply(exprs: Iterable[BVExpr]): BVExpr = {
+    assert(exprs.nonEmpty, "Don't know what to do with an empty list!")
+    val nonTriviallyTrue = exprs.filterNot(_ == True())
+    if(nonTriviallyTrue.isEmpty) { True() } else { nonTriviallyTrue.reduce(apply) }
+  }
+}
+object BVOr {
+  def apply(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.Or, a, b)
+  def apply(exprs: Iterable[BVExpr]): BVExpr = {
+    assert(exprs.nonEmpty, "Don't know what to do with an empty list!")
+    val nonTriviallyFalse = exprs.filterNot(_ == False())
+    if(nonTriviallyFalse.isEmpty) { False() } else { nonTriviallyFalse.reduce(apply) }
+  }
 }
 
 object SMTEqual {

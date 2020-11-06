@@ -13,7 +13,7 @@ object Solver {
 trait Solver {
   // basic properties
   def name: String
-  def supportsQuantifiers: Boolean = false
+  def supportsQuantifiers: Boolean
   /** Constant Arrays are not required by SMTLib: https://rise4fun.com/z3/tutorialcontent/guide */
   def supportsConstArrays: Boolean
   def supportsUninterpretedFunctions: Boolean
@@ -36,7 +36,10 @@ trait Solver {
     pCheckCount += 1
     doCheck(produceModel)
   }
+  def runCommand(cmd: SMTCommand): Unit
   def queryModel(e: BVSymbol): Option[BigInt]
+  def getValue(e: BVExpr): Option[BigInt]
+  def getValue(e: ArrayExpr): Seq[(Option[BigInt], BigInt)]
   /** releases all native resources */
   def close(): Unit
 

@@ -1,6 +1,6 @@
 package maltese.passes
 
-import maltese.smt.TransitionSystem
+import maltese.mc.TransitionSystem
 
 trait Pass {
   def run(sys: TransitionSystem): TransitionSystem

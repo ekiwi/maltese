@@ -5,7 +5,8 @@
 
 package maltese.passes
 
-import maltese.smt._
+import maltese.mc._
+import maltese.smt.SMTSimplifier
 
 /** simplifies signals where possible  */
 object Simplify extends Pass {

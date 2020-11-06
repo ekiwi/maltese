@@ -6,6 +6,8 @@
 package maltese.passes
 
 import maltese.smt._
+import maltese.mc._
+
 import scala.collection.mutable
 
 /** Inlines signals:
@@ -14,7 +16,7 @@ import scala.collection.mutable
  * This pass does not remove any symbols.
  * Use DeadCodeElimination to get rid of any unused signals after inlining.
  */
-object Inline extends Pass {
+class Inline(inlineEverything: Boolean = false) extends Pass {
   override def name: String = "Inline"
 
   // some setting to play around with
@@ -25,7 +27,12 @@ object Inline extends Pass {
   private val InlineIteInSlice = true
 
   override def run(sys: TransitionSystem): TransitionSystem = {
-    val doInline = findSignalsToInline(sys)
+    val doInline = if(inlineEverything) {
+      sys.signals.map(_.name).toSet
+    } else {
+      findSignalsToInline(sys)
+    }
+
     if(doInline.isEmpty) {
       sys
     } else {
@@ -68,9 +75,9 @@ object Inline extends Pass {
     case other => other.mapExpr(replaceSymbols(_, false, false))
   }
 
-  private def findSignalsToInline(sys: TransitionSystem): Set[String] = {
+  protected def findSignalsToInline(sys: TransitionSystem): Set[String] = {
     // count how often a symbol is used
-    val useCount = Analysis.countUses(sys.signals)
+    val useCount = Analysis.countUses(sys.signals.map(_.e))
     val onlyUsedOnce = sys.signals.filter(s => useCount(s.name) <= InlineUseMax).map(_.name).toSet
     // we also want to inline signals that are only aliases
     val leafSignals = if(InlineLeaves) sys.signals.filter(s => isLeafExpr(s.e)).map(_.name).toSet else Set[String]()

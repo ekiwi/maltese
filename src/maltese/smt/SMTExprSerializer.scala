@@ -21,6 +21,7 @@ object SMTExprSerializer {
     case BVSlice(e, hi, lo) => s"${serialize(e)}[$hi:$lo]"
     case BVNot(e) => s"not(${serialize(e)})"
     case BVNegate(e) => s"neg(${serialize(e)})"
+    case BVForall(variable, e) => s"forall(${variable.toStringWithType}, ${serialize(e)}"
     // binary
     case BVEqual(a, b) => s"eq(${serialize(a)}, ${serialize(b)})"
     case BVComparison(Compare.Greater, a, b, false) => s"ugt(${serialize(a)}, ${serialize(b)})"
@@ -31,17 +32,23 @@ object SMTExprSerializer {
     case BVConcat(a, b) => s"concat(${serialize(a)}, ${serialize(b)})"
     case ArrayRead(array, index) => s"${serialize(array)}[${serialize(index)}]"
     case ArrayEqual(a, b) => s"eq(${serialize(a)}, ${serialize(b)})"
+    case BVImplies(a, b) => s"implies(${serialize(a)}, ${serialize(b)})"
     // ternary
     case BVIte(cond, tru, fals) => s"ite(${serialize(cond)}, ${serialize(tru)}, ${serialize(fals)})"
     // n-ary
     case BVSelect(choices) =>
       choices.map{ case (c,v) => serialize(c) + " -> " + serialize(v) }.mkString("select(", ", ", ")")
+    case BVFunctionCall(name, args, _) => name + serialize(args).mkString("(", ",", ")")
   }
 
   def serialize(expr: ArrayExpr): String = expr match {
     case ArraySymbol(name, _, _) => name
-    case ArrayConstant(e, indexWidth) => s"([${serialize(e)}] x ${ (BigInt(1) << indexWidth) - 1 })"
+    case ArrayConstant(e, indexWidth) => s"([${serialize(e)}] x ${ (BigInt(1) << indexWidth) })"
     case ArrayStore(array, index, data) => s"${serialize(array)}[${serialize(index)} := ${serialize(data)}]"
     case ArrayIte(cond, tru, fals) => s"ite(${serialize(cond)}, ${serialize(tru)}, ${serialize(fals)})"
+    case ArrayFunctionCall(name, args, _, _) => name + serialize(args).mkString("(", ",", ")")
   }
+
+  private def serialize(args: Iterable[SMTFunctionArg]): Iterable[String] =
+    args.map { case b: BVExpr => serialize(b) case a: ArrayExpr => serialize(a) case u: UTSymbol => u.name }
 }
