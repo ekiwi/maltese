@@ -2,8 +2,8 @@ package maltese
 
 import java.io.File
 
+import maltese.mc._
 import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, PrintSystem, Simplify}
-import maltese.smt.TransitionSystem
 
 object FuzzerApp extends App {
   var system: TransitionSystem = _
@@ -17,19 +17,24 @@ object FuzzerApp extends App {
   } else {
     system = Fuzzer.load(args.head)
   }
-  val exe = new ExecutionEngine(system)
-  while(exe.execute()){}
+  val exe = new ExecutionEngine(system, true)
+  var inputs: Map[String, BigInt] = _
+  var cnt = 0
+  do {
+    cnt+=1
+    inputs = exe.inputsGenerator(true)
+  } while(exe.execute(inputs) & cnt <= 7)
 }
 
 object Fuzzer {
 
   private val passes: Iterable[Pass] = Seq(
    Simplify,
-   Inline,
+    new Inline,
    DeadCodeElimination,
 
    Simplify,
-   Inline,
+    new Inline,
    DeadCodeElimination,
 
     Simplify,
@@ -39,7 +44,7 @@ object Fuzzer {
 
   def load(filename: String): TransitionSystem = {
     // load transition system from file
-    val sys = smt.Btor2.load(new File(filename))
+    val sys = mc.Btor2.load(new File(filename))
 
     println(s"Loaded $filename")
 
