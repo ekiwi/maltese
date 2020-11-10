@@ -6,8 +6,6 @@ import maltese.mc._
 import scala.io.StdIn.readLine
 import scala.util.Random
 
-// General Questions:
-
 class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boolean) {
   private var memoryMap = collection.mutable.Map[String, BigInt]()
   memoryMap ++= simplifiedSystem.inputs.map(input => input.name -> BigInt(0))
@@ -31,7 +29,7 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boole
     BigInt(readLine.toInt) & ((1 << input.width) - 1)
   }
   private def inputRNG(input: BVSymbol): BigInt = { //currently fails constraints pretty easily
-    val rand = rng.nextInt(4) //rng.nextInt(1 << input.width)
+    val rand = rng.nextInt(1 << input.width)
     println(f"Input for ${input.name} set to $rand")
     rand
   }
@@ -86,6 +84,7 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boole
       case e: BVComparison => doBVCompare(e.op, eval(e.a), eval(e.b), e.width, e.signed)
       case e: BVOp => doBVOp(e.op, eval(e.a), eval(e.b), e.width)
       case e: BVConcat => doBVConcat(eval(e.a), eval(e.b), e.width)
+      case e: BVIte => if (eval(e.cond)!=0) eval(e.tru) else eval(e.fals)
     }
   }
 
