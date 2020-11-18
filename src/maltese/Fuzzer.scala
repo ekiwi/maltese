@@ -17,7 +17,7 @@ object FuzzerApp extends App {
   } else {
     system = Fuzzer.load(args.head)
   }
-  Fuzzer.execute(system, 5, 2020, true, false)
+  Fuzzer.execute(system, 5, 914820231, Some("benchmarks/custom/simple.vcd"), verbose=true)
 }
 
 object Fuzzer {
@@ -54,14 +54,14 @@ object Fuzzer {
 
   def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = true)
 
-  def execute(system: TransitionSystem, limit:Int = 10, seed:Int = 0, witness: Boolean = false, verbose: Boolean = false) = {
+  def execute(system: TransitionSystem, limit:Int = 10, seed:Int = 0, witness: Option[String] = None ,verbose: Boolean = false) = {
     val exe = new ExecutionEngine(system, witness, verbose)
     val inputsGen = new InputGenerator(seed, verbose)
     var cnt = 0
     var success: Boolean = true
     do {
       cnt+=1
-      val inputs = inputsGen.inputsGenerator(system, true)
+      val inputs = inputsGen.inputsGenerator(system, false)
       success = exe.execute(inputs)
     } while(success & cnt <= limit)
   }

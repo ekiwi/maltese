@@ -21,4 +21,8 @@ class InputGenerator(val seed: Int, val verbose: Boolean) {
     if (verbose) println(f"Input for ${input.name} set to $rand")
     rand
   }
+
+  def mutateInputs(inputs: Map[String, BigInt]): Map[String, BigInt] = {
+    inputs
+  }
 }
