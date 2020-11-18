@@ -3,36 +3,26 @@ package maltese
 import maltese.smt._
 import SMTExprEval._
 import maltese.mc._
-import scala.io.StdIn.readLine
-import scala.util.Random
 
-class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boolean) {
+
+class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boolean, val verbose: Boolean) {
   private var memoryMap = collection.mutable.Map[String, BigInt]()
-  memoryMap ++= simplifiedSystem.inputs.map(input => input.name -> BigInt(0))
+  private val inputsGen = new InputGenerator()
+
   memoryMap ++= {
     val inits = simplifiedSystem.signals.filter(_.lbl == IsInit).map(init => init.name -> init).toMap
-    simplifiedSystem.states.map(state => state.sym.name -> {
+    simplifiedSystem.states.map(state => state.name -> {
       state.init match {
-        case Some(i: BVSymbol) => if (inits.contains(i.name)) eval(inits(i.name).e) else inputPrompt(state.sym.asInstanceOf[BVSymbol])
-        case _ => inputPrompt(state.sym.asInstanceOf[BVSymbol])
+        case Some(i: BVSymbol) => if (inits.contains(i.name)) eval(inits(i.name).e) else inputsGen.inputPrompt(state.sym.asInstanceOf[BVSymbol])
+        case _ => inputsGen.inputPrompt(state.sym.asInstanceOf[BVSymbol])
       }
     })
   }
   private val transitions = simplifiedSystem.signals.filter(_.lbl != IsInit)
   private var inputsList = collection.mutable.ArrayBuffer.empty[Map[String, BigInt]]
-  private val rng = Random
 
-  def inputsGenerator(random: Boolean): Map[String, BigInt] =
-    simplifiedSystem.inputs.map(input => input.name -> { if (random) inputRNG(input) else inputPrompt(input)}).toMap
-  private def inputPrompt(input: BVSymbol): BigInt = {
-    print(f"Input value for ${input.name}: ")
-    BigInt(readLine.toInt) & ((1 << input.width) - 1)
-  }
-  private def inputRNG(input: BVSymbol): BigInt = { //currently fails constraints pretty easily
-    val rand = rng.nextInt(1 << input.width)
-    println(f"Input for ${input.name} set to $rand")
-    rand
-  }
+
+
 
   def execute(inputs: Map[String, BigInt]): Boolean = {
     //initialize input. missing values default to 0
@@ -43,19 +33,22 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Boole
       inputsList += inputs
     }
 
+    //print states
+    if (verbose) {
+      for (state <- simplifiedSystem.states) {
+        println(f"${state.name} has value ${memoryMap(state.name)}")
+      }
+    }
+
     // execute transitions
     var value: BigInt = 0
     for (trans <- transitions) {
       value = eval(trans.e)
       memoryMap(trans.name) = value
       trans.lbl match {
-//        case IsNext => {
-//          val state = trans.name.split("\\.")(0)
-//          memoryMap(state) = memoryMap(trans.name)
-//        }
         case IsConstraint => if (value == 0) return failCase(trans)
         case IsBad => if (value != 0) return failCase(trans)
-        case IsOutput => println(s"Output for ${trans.name}: $value")
+        case IsOutput => if (verbose) println(s"Output for ${trans.name} is $value")
         case _ =>
       }
     }
