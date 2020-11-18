@@ -15,7 +15,7 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Optio
     simplifiedSystem.states.foreach(s => vv.addWire(s.name, s.sym.asInstanceOf[BVSymbol].width))
     Some(vv)
   }
-
+  private var step = 0;
   memoryMap ++= {
     val inits = simplifiedSystem.signals.filter(_.lbl == IsInit).map(init => init.name -> init).toMap
     simplifiedSystem.states.map(state => state.name -> {
@@ -26,7 +26,6 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Optio
     })
   }
   private val transitions = simplifiedSystem.signals.filter(_.lbl != IsInit)
-  private var inputsList = collection.mutable.ArrayBuffer.empty[Map[String, BigInt]]
 
 
   def execute(inputs: Map[String, BigInt]): Boolean = {
@@ -44,9 +43,10 @@ class ExecutionEngine(val simplifiedSystem: TransitionSystem, val witness: Optio
 
     if (witness.nonEmpty) {
       val vv = vcdWriter.get
+      vv.wireChanged("Step", step)
       simplifiedSystem.inputs.foreach(s => vv.wireChanged(s.name, memoryMap(s.name)))
       simplifiedSystem.states.foreach(s => vv.wireChanged(s.name, memoryMap(s.name)))
-
+      step+=1
     }
 
     // execute transitions
