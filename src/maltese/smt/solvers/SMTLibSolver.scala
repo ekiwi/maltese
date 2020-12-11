@@ -5,6 +5,7 @@
 package maltese.smt.solvers
 
 import maltese.smt
+import maltese.smt.{Comment, DeclareFunction, DeclareUninterpretedSort, DeclareUninterpretedSymbol, DefineFunction, SMTCommand, SetLogic}
 import maltese.smt.solvers.Solver.Logic
 import maltese.smt.solvers.uclid.InteractiveProcess
 
@@ -38,13 +39,17 @@ class Z3SMTLib extends SMTLibSolver(List("z3", "-in")) {
 
 /** provides basic facilities to interact with any SMT solver that supports a SMTLib base textual interface */
 abstract class SMTLibSolver(cmd: List[String]) extends Solver {
-  private val debug: Boolean = true
+  protected val debug: Boolean = false
 
+  private var _stackDepth: Int = 0
+  override def stackDepth = _stackDepth
   override def push(): Unit = {
     writeCommand("(push 1)")
+    _stackDepth += 1
   }
   override def pop(): Unit = {
     writeCommand("(pop 1)")
+    _stackDepth -= 1
   }
   override def assert(expr: smt.BVExpr): Unit = {
     // TODO: println("TODO: declare free variables automatically")
@@ -55,7 +60,7 @@ abstract class SMTLibSolver(cmd: List[String]) extends Solver {
     val cmd = s"(get-value (${serialize(e)}))"
     writeCommand(cmd)
     readResponse() match {
-      case Some(strModel) => Some(parseValue(strModel.trim))
+      case Some(strModel) => Some(SMTLibResponseParser.parseValue(strModel.trim))
       case None => throw new RuntimeException(s"Solver ${name} did not reply to $cmd")
     }
   }
@@ -63,8 +68,7 @@ abstract class SMTLibSolver(cmd: List[String]) extends Solver {
     val cmd = s"(get-value (${serialize(e)}))"
     writeCommand(cmd)
     readResponse() match {
-      case Some(strModel) =>
-        throw new NotImplementedError(s"TODO:\n$strModel")
+      case Some(strModel) => SMTLibResponseParser.parseMemValue(strModel.trim)
       case None => throw new RuntimeException(s"Solver ${name} did not reply to $cmd")
     }
   }
@@ -84,7 +88,7 @@ abstract class SMTLibSolver(cmd: List[String]) extends Solver {
     proc.kill()
   }
   override protected def doSetLogic(logic: Logic): Unit = getLogic match {
-    case None => writeCommand(serialize(SetLogic(logic)))
+    case None => writeCommand(serialize(smt.SetLogic(logic)))
     case Some(old) => require(logic == old, s"Cannot change logic from $old to $logic")
   }
   override protected def doCheck(produceModel: Boolean): SolverResult = {
@@ -101,28 +105,12 @@ abstract class SMTLibSolver(cmd: List[String]) extends Solver {
     }
   }
 
-  private def parseValue(v: String): BigInt = {
-    require(v.startsWith("((("))
-    require(v.endsWith("))"))
-    val bare = v.drop(3).dropRight(2)
-    val parts = v.split(')')
-    require(parts.length == 2)
-    val valueStr = parts.last.trim
-    if(valueStr == "true") { BigInt(1) }
-    else if(valueStr == "false") { BigInt(0) }
-    else if(valueStr.startsWith("#b")) { BigInt(valueStr.drop(2), 2) }
-    else if(valueStr.startsWith("#x")) { BigInt(valueStr.drop(2), 16) }
-    else {
-      throw new NotImplementedError(s"Unsupported number format: $valueStr")
-    }
-  }
-
   private def serialize(e: smt.SMTExpr): String = smt.SMTLibSerializer.serialize(e)
   private def serialize(c: SMTCommand): String = smt.SMTLibSerializer.serialize(c)
 
   private val proc = new InteractiveProcess(cmd, true)
   protected def writeCommand(str : String): Unit = {
-    if(debug) println(s"-> $str")
+    if(debug) println(s"$str")
     proc.writeInput(str + "\n")
   }
   protected def readResponse() : Option[String] = {
