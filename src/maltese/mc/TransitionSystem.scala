@@ -5,10 +5,39 @@
 package maltese.mc
 
 import maltese.{mc, smt}
-import maltese.smt.{BVExpr, BVSymbol, SMTExpr, SMTSymbol}
+import maltese.smt.{ArraySymbol, BVExpr, BVSymbol, SMTExpr, SMTSymbol}
 
-case class State(sym: SMTSymbol, init: Option[SMTExpr], next: Option[SMTExpr]) {
+sealed trait State {
+  def sym: SMTSymbol
+  def init: Option[SMTExpr]
+  def next: Option[SMTExpr]
   def name: String = sym.name
+  def rename(newName: String): State
+  def addInit(i: SMTSymbol): State
+  def addNext(n: SMTSymbol): State
+  def map(f: SMTExpr => SMTExpr): State
+}
+object State {
+  def apply(sym: SMTSymbol): State = sym match {
+    case b: BVSymbol => BVState(b, None, None)
+    case a: ArraySymbol => ArrayState(a, None, None)
+  }
+}
+case class BVState(sym: BVSymbol, init: Option[BVSymbol], next: Option[BVSymbol]) extends State {
+  override def rename(newName: String): BVState = copy(sym = sym.rename(newName))
+  override def addInit(i: SMTSymbol): BVState = { assert(init.isEmpty) ; copy(init = Some(i.asInstanceOf[BVSymbol])) }
+  override def addNext(n: SMTSymbol): BVState = { assert(next.isEmpty) ; copy(next = Some(n.asInstanceOf[BVSymbol])) }
+  override def map(f: SMTExpr => SMTExpr): BVState = BVState(
+    f(sym).asInstanceOf[BVSymbol], init.map(f).map(_.asInstanceOf[BVSymbol]), next.map(f).map(_.asInstanceOf[BVSymbol])
+  )
+}
+case class ArrayState(sym: ArraySymbol, init: Option[ArraySymbol], next: Option[ArraySymbol]) extends State {
+  override def rename(newName: String): ArrayState = copy(sym = sym.rename(newName))
+  override def addInit(i: SMTSymbol): ArrayState = { assert(init.isEmpty) ; copy(init = Some(i.asInstanceOf[ArraySymbol])) }
+  override def addNext(n: SMTSymbol): ArrayState = { assert(next.isEmpty) ; copy(next = Some(n.asInstanceOf[ArraySymbol])) }
+  override def map(f: SMTExpr => SMTExpr): ArrayState = ArrayState(
+    f(sym).asInstanceOf[ArraySymbol], init.map(f).map(_.asInstanceOf[ArraySymbol]), next.map(f).map(_.asInstanceOf[ArraySymbol])
+  )
 }
 case class Signal(name: String, e: SMTExpr, lbl: SignalLabel = IsNode) {
   def toSymbol: SMTSymbol = SMTSymbol.fromExpr(name, e)
@@ -56,7 +85,7 @@ object TransitionSystem {
     val renames = names.map(n => n -> (prefix + n)).toMap
     val inputs = sys.inputs.map(i => i.rename(renames.getOrElse(i.name, i.name)))
     def r(e: SMTExpr): SMTExpr = rename(renames)(e)
-    val states = sys.states.map(s => mc.State(r(s.sym).asInstanceOf[SMTSymbol], s.init.map(r), s.next.map(r)))
+    val states = sys.states.map(_.map(r))
     val signals = sys.signals.map(s => s.copy(name = renames(s.name), e = r(s.e)))
     TransitionSystem(sys.name, inputs, states, signals)
   }

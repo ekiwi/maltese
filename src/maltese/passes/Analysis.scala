@@ -10,12 +10,14 @@ import maltese.smt._
 import scala.collection.mutable
 
 object Analysis {
+  /** returns a list of symbols use in expression `e` */
   def findSymbols(e: SMTExpr): List[SMTSymbol] = e match {
     case s: BVSymbol => List(s)
     case s: ArraySymbol => List(s)
     case other => other.children.flatMap(findSymbols)
   }
 
+  /** returns a map from symbol name to number of uses */
   def countUses(sys: mc.TransitionSystem): String => Int =
     countUses(sys.signals.map(_.e) ++ sys.states.flatMap(s => s.init ++ s.next))
 
@@ -30,5 +32,9 @@ object Analysis {
     case BVSymbol(name, _) => useCount(name) += 1
     case ArraySymbol(name, _, _) => useCount(name) += 1
     case other => other.foreachExpr(countUses)
+  }
+
+  def generateDependencyMap(sys: mc.TransitionSystem): Map[String, String] = {
+    ???
   }
 }

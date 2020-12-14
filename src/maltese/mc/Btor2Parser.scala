@@ -93,12 +93,12 @@ private object Btor2Parser {
       val id = Integer.parseInt(parts.head)
 
       // nodes besides output that feature nid
-      def expr(offset: Int): SMTExpr = {
+      def expr(offset: Int, neverInline: Boolean = false): SMTExpr = {
         assert(parts.length > 3 + offset, s"parts(${3 + offset}) does not exist! ${parts.mkString(", ")}")
         val nid = Integer.parseInt(parts(3 + offset))
         assert(signals.contains(nid), s"Unknown node #$nid")
         val sig = signals(nid)
-        if(inlineSignals) { sig.e } else { sig.toSymbol }
+        if(inlineSignals && !neverInline) { sig.e } else { sig.toSymbol }
       }
       def bvExpr(offset: Int) = expr(offset).asInstanceOf[BVExpr]
       def arrayExpr(offset: Int) = expr(offset).asInstanceOf[ArrayExpr]
@@ -156,23 +156,25 @@ private object Btor2Parser {
         case "state" =>
           name = Some(getLabelName("state"))
           val sym = if(isArray) ArraySymbol(name.get, indexWidth, dataWidth) else BVSymbol(name.get, width)
-          states.put(id, State(sym, None, None))
+          states.put(id, State(sym))
           Some(sym)
         case "next" =>
           val stateId = Integer.parseInt(parts(3))
           val state = states(stateId)
           name = Some(namespace.newName(state.sym.name + ".next"))
           label = IsNext
-          val nextExpr = expr(1)
-          states.put(stateId, state.copy(next=Some(toSymbolOrExpr(name.get,  nextExpr))))
+          val nextExpr = expr(1, neverInline = true)
+          val nextSym = SMTSymbol.fromExpr(name.get, nextExpr)
+          states.put(stateId, state.addNext(nextSym))
           Some(nextExpr)
         case "init" =>
           val stateId = Integer.parseInt(parts(3))
           val state = states(stateId)
           name = Some(namespace.newName(state.sym.name + ".init"))
           label = IsInit
-          val initExpr = expr(1)
-          states.put(stateId, state.copy(init=Some(toSymbolOrExpr(name.get, initExpr))))
+          val initExpr = expr(1, neverInline = true)
+          val initSym = SMTSymbol.fromExpr(name.get, initExpr)
+          states.put(stateId, state.addInit(initSym))
           Some(initExpr)
         case format @ ("const" | "constd" | "consth" | "zero" | "one") =>
           val value = if(format == "zero"){ BigInt(0)
