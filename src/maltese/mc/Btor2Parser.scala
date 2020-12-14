@@ -228,7 +228,7 @@ private object Btor2Parser {
 
     // if we are inlining, we are ignoring all node signals
     val keep = if(inlineSignals) {
-      s: Signal => s.lbl != IsNode && s.lbl != IsNext && s.lbl != IsInit && !isInputOrState(s.name)
+      s: Signal => s.lbl != IsNode && !isInputOrState(s.name)
     } else { s: Signal => !isInputOrState(s.name) }
     val finalSignals = signals.values.filter(keep).toList
 
