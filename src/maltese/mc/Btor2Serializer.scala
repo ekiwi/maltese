@@ -184,11 +184,7 @@ private class Btor2Serializer private () {
     sys.states.foreach { st =>
       // calculate init expression before declaring the state
       // this is required by btormc (presumably to avoid cycles in the init expression)
-      val initId = st.init.map {
-        // only in the context of initializing a state can we use a bv expression to model an array
-        case ArrayConstant(e, _) => comment(s"${st.sym}.init"); s(e)
-        case init => comment(s"${st.sym}.init"); s(init)
-      }
+      val initId = st.init.map { init => comment(s"${st.sym}.init"); s(init) }
       declare(st.sym.name, None, line(s"state ${t(st.sym)} ${st.sym.name}"))
       st.init.foreach { init => line(s"init ${t(init)} ${s(st.sym)} ${initId.get}") }
     }

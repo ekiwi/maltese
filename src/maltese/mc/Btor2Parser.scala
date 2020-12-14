@@ -173,7 +173,7 @@ private object Btor2Parser {
           name = Some(namespace.newName(state.sym.name + ".init"))
           label = IsInit
           val initExpr = expr(1, neverInline = true)
-          val initSym = SMTSymbol.fromExpr(name.get, initExpr)
+          val initSym = SMTSymbol.fromExpr(name.get, state.sym)
           states.put(stateId, state.addInit(initSym))
           Some(initExpr)
         case format @ ("const" | "constd" | "consth" | "zero" | "one") =>
@@ -231,9 +231,26 @@ private object Btor2Parser {
       s: Signal => s.lbl != IsNode && !isInputOrState(s.name)
     } else { s: Signal => !isInputOrState(s.name) }
     val finalSignals = signals.values.filter(keep).toList
+    val finalStates = states.values.toList
+    val finalSignalsWithConstArray = addArrayFromConst(finalStates, finalSignals)
 
     val sysName = name.getOrElse(defaultName)
-    TransitionSystem(sysName, inputs=inputs.toList, states=states.values.toList, signals = finalSignals)
+    TransitionSystem(sysName, inputs=inputs.toList, states=finalStates, signals = finalSignalsWithConstArray)
+  }
+
+  /** Array states can be initialized with a bv expression which implies a as const array expression. */
+  private def addArrayFromConst(states: Iterable[State], signals: List[Signal]): List[Signal] = {
+    // state signal type lookup (used to promote bv expressions to constant arrays)
+    val arrayStateInits = states.collect{ case a: ArrayState => a }.flatMap(_.init).map(s => s.name -> s).toMap
+
+    signals.map {
+      // bv signal initializing an array
+      case Signal(name, e: BVExpr, IsInit) if arrayStateInits.contains(name) =>
+        val indexWidth = arrayStateInits(name).indexWidth
+        val array = ArrayConstant(e, indexWidth)
+        Signal(name, array, IsInit)
+      case other => other
+    }
   }
 
   private def parseConst(format: String, str: String): BigInt = format match {

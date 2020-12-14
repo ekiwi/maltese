@@ -9,8 +9,8 @@ import maltese.smt.{ArraySymbol, BVExpr, BVSymbol, SMTExpr, SMTSymbol}
 
 sealed trait State {
   def sym: SMTSymbol
-  def init: Option[SMTExpr]
-  def next: Option[SMTExpr]
+  def init: Option[SMTSymbol]
+  def next: Option[SMTSymbol]
   def name: String = sym.name
   def rename(newName: String): State
   def addInit(i: SMTSymbol): State
