@@ -88,6 +88,8 @@ object SMTSimplifier {
     case BVOp(Op.Or, True(), _) => BVLiteral(1, 1)
     case BVOp(Op.Or, a, False()) => a
     case BVOp(Op.Or, False(), b) => b
+    case BVOp(Op.Or, BVNot(a), b) => BVImplies(a, b)
+    case BVOp(Op.Or, b, BVNot(a)) => BVImplies(a, b)
     case other => other
   }
 
