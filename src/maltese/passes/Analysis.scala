@@ -34,7 +34,4 @@ object Analysis {
     case other => other.foreachExpr(countUses)
   }
 
-  def generateDependencyMap(sys: mc.TransitionSystem): Map[String, String] = {
-    ???
-  }
 }
