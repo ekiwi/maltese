@@ -278,14 +278,9 @@ private object Btor2Parser {
     case "srem" => BVOp(Op.SignedRem, a, b)
     case "urem" => BVOp(Op.UnsignedRem, a, b)
     case "sub" => BVOp(Op.Sub, a, b)
-    case "implies" => implies(a, b)
+    case "implies" => BVImplies(a, b)
     case "iff" => iff(a,b )
     case other => throw new RuntimeException(s"Unknown binary op $other")
-  }
-
-  private def implies(a: BVExpr, b: BVExpr): BVExpr = {
-    assert(a.width == 1 && b.width == 1, s"Both arguments need to be 1-bit!")
-    BVOp(Op.Or, BVNot(a), b)
   }
 
   private def iff(a: BVExpr, b: BVExpr): BVExpr = {
