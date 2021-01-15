@@ -10,12 +10,12 @@ import treadle.vcd
 import scala.collection.mutable
 
 class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 128, printUpdates: Boolean = false) {
-  private val (bvStates, arrayStates) = sys.states.partition(s => s.sym.isInstanceOf[smt.BVExpr])
-  private val (bvSignals, arraySignals) = sys.signals.partition(s => s.e.isInstanceOf[smt.BVExpr])
+  private val (bvStates, arrayStates) = sys.states.partition(s => s.isInstanceOf[smt.BVExpr])
+  private val (bvSignals, arraySignals) = sys.next.partition(s => s.e.isInstanceOf[smt.BVExpr])
 
   //
-  private val allArrays =(arrayStates.map(_.sym) ++ arraySignals.map(_.sym)).map(_.asInstanceOf[smt.ArraySymbol])
-  private val allBV = (sys.inputs ++ bvStates.map(_.sym) ++ bvSignals.map(_.sym)).map(_.asInstanceOf[smt.BVSymbol])
+  private val allArrays =(arrayStates ++ arraySignals.map(_.sym)).map(_.asInstanceOf[smt.ArraySymbol])
+  private val allBV = (sys.inputs ++ bvStates ++ bvSignals.map(_.sym)).map(_.asInstanceOf[smt.BVSymbol])
 
   // mutable state indexing
   private val bvNameToIndex = allBV.map(_.name).zipWithIndex.toMap
@@ -31,10 +31,10 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
   // vcd dumping
   private var vcdWriter: Option[vcd.VCD] = None
   private val observedMemories =
-    arrayStates.map(_.sym.asInstanceOf[smt.ArraySymbol]).filter(a => arrayDepth(a.indexWidth) <= maxMemVcdSize)
+    arrayStates.map(_.asInstanceOf[smt.ArraySymbol]).filter(a => arrayDepth(a.indexWidth) <= maxMemVcdSize)
 
   //
-  private val badNameToIndex: Map[String, Int] = sys.signals.filter(_.lbl == IsBad).map(_.name).zipWithIndex.toMap
+  private val badNameToIndex: Map[String, Int] = sys.next.filter(_.lbl == IsBad).map(_.name).zipWithIndex.toMap
 
 
   private case class Memory(data: Seq[BigInt]) extends smt.ArrayValue {
@@ -98,7 +98,7 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
     println("Inputs:")
     sys.inputs.foreach(i => println(s"${i.name}: ${data(bvNameToIndex(i.name))}"))
     println("Registers:")
-    bvStates.foreach(s => println(s"${s.sym}: ${data(bvNameToIndex(s.sym.name))}"))
+    bvStates.foreach(s => println(s"${s}: ${data(bvNameToIndex(s.name))}"))
     println("TODO: memories")
   }
 
@@ -115,12 +115,31 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
       Some(vv)
     }
 
-    // initialize registers and memories in order (this ensures that they are topologically sorted by their init dependencies)
-    sys.states.zipWithIndex.foreach { case (state, ii) =>
+    // we first initialize state that does not have an init expression
+    val hasInit = sys.init.filter(_.lbl == IsInit).map(_.sym).toSet
+    sys.states.filterNot(hasInit).zipWithIndex.foreach { case (state, ii) =>
       if(arrayNameToIndex.contains(state.name)) {
         // init memory
-        val value = state.init match {
-          case Some(init) => evalArray(init.asInstanceOf[smt.ArrayExpr])
+        val depth = arrayDepth(state.asInstanceOf[smt.ArraySymbol].indexWidth)
+        val value =
+          if(memInit.contains(ii)) { writesToMemory(depth, memInit(ii))
+          } else {
+              println(s"WARN: Initial value for ${state.sym} ($ii) is missing!")
+              Memory(randomSeq(depth))
+          }
+        memories(arrayNameToIndex(state.name)) = value
+      } else {
+        data(bvNameToIndex(state.name)) = regInit(ii)
+      }
+    }
+
+    // now we initialize the state that does have an init expression
+    assert(sys.init.forall(_.lbl == IsInit), "we only support fully inlined init expressions!")
+
+    sys.states.filter(hasInit).zipWithIndex.foreach { case (state, ii) =>
+      if(arrayNameToIndex.contains(state.name)) {
+        // init memory
+        val value = evalArray(init.asInstanceOf[smt.ArrayExpr])
           case None =>
             val depth = arrayDepth(state.sym.asInstanceOf[smt.ArraySymbol].indexWidth)
             if(memInit.contains(ii)) {
@@ -171,7 +190,7 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
     }
 
     // evaluate signals
-    sys.signals.foreach {
+    sys.next.foreach {
       case Signal(name, e: smt.BVExpr, _) =>
         val value = eval(e)
         if(printUpdates) println(s"S: $name -> $value")
@@ -201,7 +220,7 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
 
     // make sure constraints are not violated
     def simpl(e: smt.SMTExpr): smt.SMTExpr = smt.SMTSimplifier.simplify(e)
-    sys.signals.filter(_.lbl == IsConstraint).foreach { signal =>
+    sys.next.filter(_.lbl == IsConstraint).foreach { signal =>
       val holds = data(bvNameToIndex(signal.name))
       assert(holds == 0 || holds == 1, s"Constraint ${signal.name} returned invalid value when evaluated: $holds")
       if(holds == 0) {
@@ -213,11 +232,11 @@ class TransitionSystemSimulator(sys: TransitionSystem, val maxMemVcdSize: Int = 
     }
 
     // check to see if any safety properties failed
-    val failed = sys.signals.filter(_.lbl == IsBad).map { signal =>
+    val failed = sys.next.filter(_.lbl == IsBad).map { signal =>
       (signal.name, data(bvNameToIndex(signal.name)))
     }.filter(_._2 != 0).map(_._1)
     def failedMsg(name: String): String = {
-      val expr = simpl(sys.signals.find(_.name == name).get.e)
+      val expr = simpl(sys.next.find(_.name == name).get.e)
       //val syms = symbolsToString(Context.findSymbols(expr)).mkString(", ")
       s"$name: $expr"
     }

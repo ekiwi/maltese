@@ -26,7 +26,7 @@ object AddForallQuantifiers {
     val inputs = inlinedSys.inputs.filterNot(variables.contains)
 
     // we quantify over any variable that is part of the expression
-    val signals = inlinedSys.signals.map {
+    val signals = inlinedSys.next.map {
       case s @ mc.Signal(_, e: smt.BVExpr, mc.IsBad) => s.copy(e = not(addAllQuantifiers(variables)(not(e))))
       case s @ mc.Signal(_, e: smt.BVExpr, _) if e.width == 1 => s.copy(e = addAllQuantifiers(variables)(e))
       case s => assertNoVars(s.e, variables.keySet) ; s
@@ -38,7 +38,7 @@ object AddForallQuantifiers {
       s.next.foreach(assertNoVars(_, variables.keySet))
     }
 
-    inlinedSys.copy(inputs = inputs, signals = signals)
+    inlinedSys.copy(inputs = inputs, next = signals)
   }
 
 

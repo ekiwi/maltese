@@ -13,7 +13,7 @@ object Simplify extends Pass {
   override def name: String = "Simplify"
 
   override def run(sys: TransitionSystem): TransitionSystem = {
-    sys.copy(signals = sys.signals.map(simplify))
+    sys.copy(next = sys.next.map(simplify))
   }
   private def simplify(s: Signal): Signal = s.copy(e = SMTSimplifier.simplify(s.e))
 }

@@ -19,7 +19,7 @@ object Analysis {
 
   /** returns a map from symbol name to number of uses */
   def countUses(sys: mc.TransitionSystem): String => Int =
-    countUses(sys.signals.map(_.e) ++ sys.states.flatMap(s => s.init ++ s.next))
+    countUses(sys.next.map(_.e) ++ sys.states.flatMap(s => s.init ++ s.next))
 
   def countUses(expr: Iterable[SMTExpr]): String => Int = {
     // count how often a symbol is used

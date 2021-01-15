@@ -37,10 +37,11 @@ private object Btor2Parser {
   def read(lines: Iterator[String], inlineSignals: Boolean, defaultName: String): TransitionSystem = {
     val bvSorts = new mutable.HashMap[Int,Int]()
     val arraySorts = new mutable.HashMap[Int,(Int,Int)]()
-    val states = new mutable.HashMap[Int,State]()
+    val states = new mutable.HashMap[Int,SMTSymbol]()
     val inputs = new mutable.ArrayBuffer[BVSymbol]()
     val signals = new mutable.LinkedHashMap[Int,Signal]()
     val yosysLabels = new mutable.HashMap[Int,String]()
+    val dependencies = new mutable.HashMap[String, Set[String]]()
     val namespace = Namespace()
 
 
@@ -91,6 +92,8 @@ private object Btor2Parser {
       if(line.startsWith(";")) { parseComment(line);  return }
       val parts = line.split(" ")
       val id = Integer.parseInt(parts.head)
+      // tracks signals that this line depends on
+      var deps = Set[String]()
 
       // nodes besides output that feature nid
       def expr(offset: Int, neverInline: Boolean = false): SMTExpr = {
@@ -98,6 +101,7 @@ private object Btor2Parser {
         val nid = Integer.parseInt(parts(3 + offset))
         assert(signals.contains(nid), s"Unknown node #$nid")
         val sig = signals(nid)
+        deps = deps + sig.name
         if(inlineSignals && !neverInline) { sig.e } else { sig.toSymbol }
       }
       def bvExpr(offset: Int) = expr(offset).asInstanceOf[BVExpr]
@@ -135,8 +139,6 @@ private object Btor2Parser {
       def getLabelName(prefix: String): String =
         if(parts.length > 3) namespace.newName(parts(3)) else nameFromPrefix(prefix)
 
-      def toSymbolOrExpr(name: String, e: SMTExpr): SMTExpr = if(inlineSignals) e else SMTSymbol.fromExpr(name, e)
-
       def isArray: Boolean = arraySorts.contains(sortId)
 
       val cmd = parts(1)
@@ -156,25 +158,19 @@ private object Btor2Parser {
         case "state" =>
           name = Some(getLabelName("state"))
           val sym = if(isArray) ArraySymbol(name.get, indexWidth, dataWidth) else BVSymbol(name.get, width)
-          states.put(id, State(sym))
+          states.put(id, sym)
           Some(sym)
         case "next" =>
           val stateId = Integer.parseInt(parts(3))
-          val state = states(stateId)
-          name = Some(namespace.newName(state.sym.name + ".next"))
+          name = Some(states(stateId).name)
           label = IsNext
           val nextExpr = expr(1, neverInline = true)
-          val nextSym = SMTSymbol.fromExpr(name.get, nextExpr)
-          states.put(stateId, state.addNext(nextSym))
           Some(nextExpr)
         case "init" =>
           val stateId = Integer.parseInt(parts(3))
-          val state = states(stateId)
-          name = Some(namespace.newName(state.sym.name + ".init"))
+          name = Some(states(stateId).name)
           label = IsInit
           val initExpr = expr(1, neverInline = true)
-          val initSym = SMTSymbol.fromExpr(name.get, state.sym)
-          states.put(stateId, state.addInit(initSym))
           Some(initExpr)
         case format @ ("const" | "constd" | "consth" | "zero" | "one") =>
           val value = if(format == "zero"){ BigInt(0)
@@ -214,6 +210,13 @@ private object Btor2Parser {
         case Some(expr) =>
           val n = name.getOrElse(namespace.newName("s" + id))
           signals.put(id, mc.Signal(n, expr, label))
+          val depName = label match {
+            case IsInit => n + ".init"
+            case IsNext => n + ".next"
+            case _ => n
+          }
+          assert(!dependencies.contains(depName))
+          dependencies(depName) = deps //deps.map(dependencies).reduce((a,b) => a | b)
         case _ =>
       }
     }
@@ -224,7 +227,7 @@ private object Btor2Parser {
     // TODO: use yosys_lables to fill in missing symbol names
 
     // we want to ignore state and input signals
-    val isInputOrState = (inputs.map(_.name) ++ states.values.map(_.sym.name)).toSet
+    val isInputOrState = (inputs.map(_.name) ++ states.values.map(_.name)).toSet
 
     // if we are inlining, we are ignoring all node signals
     val keep = if(inlineSignals) {
@@ -235,13 +238,14 @@ private object Btor2Parser {
     val finalSignalsWithConstArray = addArrayFromConst(finalStates, finalSignals)
 
     val sysName = name.getOrElse(defaultName)
-    TransitionSystem(sysName, inputs=inputs.toList, states=finalStates, signals = finalSignalsWithConstArray)
+    println("WARN: we need to actually find out which signals belong into init!")
+    TransitionSystem(sysName, inputs=inputs.toList, states=finalStates, init = List(), next = finalSignalsWithConstArray)
   }
 
   /** Array states can be initialized with a bv expression which implies a as const array expression. */
-  private def addArrayFromConst(states: Iterable[State], signals: List[Signal]): List[Signal] = {
+  private def addArrayFromConst(states: Iterable[SMTSymbol], signals: List[Signal]): List[Signal] = {
     // state signal type lookup (used to promote bv expressions to constant arrays)
-    val arrayStateInits = states.collect{ case a: ArrayState => a }.flatMap(_.init).map(s => s.name -> s).toMap
+    val arrayStateInits = states.collect{ case a: ArraySymbol => a }.map(s => s.name -> s).toMap
 
     signals.map {
       // bv signal initializing an array

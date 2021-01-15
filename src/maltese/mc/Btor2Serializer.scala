@@ -180,26 +180,30 @@ private class Btor2Serializer private () {
       declare(ii.name, None, line(s"input ${t(ii.width)} ${ii.name}"))
     }
 
-    // define state init
-    sys.states.foreach { st =>
-      // calculate init expression before declaring the state
-      // this is required by btormc (presumably to avoid cycles in the init expression)
-      val initId = st.init.map { init => comment(s"${st.sym}.init"); s(init) }
-      declare(st.sym.name, None, line(s"state ${t(st.sym)} ${st.sym.name}"))
-      st.init.foreach { init => line(s"init ${t(init)} ${s(st.sym)} ${initId.get}") }
+    // declare states + init block
+    val statesWithInit = sys.init.filter(_.lbl == IsInit).map(_.name).toSet
+    sys.states.filterNot(s => statesWithInit(s.name)).foreach { st =>
+      declare(st.name, None, line(s"state ${t(st)} ${st.name}"))
+    }
+    sys.init.foreach {
+      case signal @ Signal(_, _, IsInit) =>
+        // calculate init expression before declaring the state
+        // this is required by btormc (presumably to avoid cycles in the init expression)
+        comment(s"${signal.name}.init")
+        val initId = s(signal.e)
+        declare(signal.name, None, line(s"state ${t(signal.e)} ${signal.name}"))
+        line(s"init ${t(signal.e)} ${s(signal.sym)} ${initId}")
+      case signal =>
+        declare(signal.name, Some(signal.lbl), s(signal.e))
     }
 
-    // define all other signals
-    sys.signals.foreach { signal =>
-      declare(signal.name, Some(signal.lbl), s(signal.e))
-    }
-
-    // define state next
-    sys.states.foreach { st =>
-      st.next.foreach { next =>
-        comment(s"${st.sym}.next")
-        line(s"next ${t(next)} ${s(st.sym)} ${s(next)}")
-      }
+    // next + constraints block
+    sys.next.foreach {
+      case signal @ Signal(_, _, IsNext) =>
+        comment(s"${signal.name}.next")
+        line(s"next ${t(signal.e)} ${s(signal.sym)} ${s(signal.e)}")
+      case signal =>
+        declare(signal.name, Some(signal.lbl), s(signal.e))
     }
 
     lines

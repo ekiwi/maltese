@@ -14,13 +14,13 @@ class AnalyzeDependencies extends Pass {
   override def name = "AnalyzeDependencies"
 
   override def run(sys: mc.TransitionSystem): mc.TransitionSystem = {
-    val constraints = sys.signals.filter(_.lbl == mc.IsConstraint).map(_.name)
+    val constraints = sys.next.filter(_.lbl == mc.IsConstraint).map(_.name)
     if(constraints.isEmpty) {
       println("WARN: no constraints")
       return sys
     }
 
-    val signalDeps = sys.signals.map { s => s.name -> Analysis.findSymbols(s.e).map(_.name) }
+    val signalDeps = sys.next.map { s => s.name -> Analysis.findSymbols(s.e).map(_.name) }
     val leaves = (sys.inputs.map(_.name) ++ sys.states.map(_.name)).map(_ -> List())
     val dependencyEdges = (signalDeps ++ leaves).toMap
 

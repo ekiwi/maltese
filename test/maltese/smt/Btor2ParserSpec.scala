@@ -57,4 +57,14 @@ class Btor2ParserSpec extends AnyFlatSpec {
     val sys = Btor2.read(count2, inlineSignals = true, defaultName = "counter2").serialize
     assert(sys.trim == expected.trim)
   }
+
+  private val arrayInit =
+    """1 sort bitvec 3
+      |
+      |
+      |
+      |
+      |""".stripMargin
+
+  it should ""
 }

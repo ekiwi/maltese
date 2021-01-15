@@ -17,7 +17,7 @@ object SymEngine {
 class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val inputs = sys.inputs.map(i => i.name -> i).toMap
   private val states = sys.states.map(s => s.sym.name -> s).toMap
-  private val signals = sys.signals.map(s => s.name -> s).toMap
+  private val signals = sys.next.map(s => s.name -> s).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
   private implicit val ctx = new SymbolicContext(opts)
 

@@ -28,7 +28,7 @@ class Uclid5Serializer private() {
     lines += "  // state"
     lines ++= sys.states.map(s => s"  var ${serializeWithType(s.sym)};")
     lines += "  // signals"
-    lines ++= sys.signals.map(s => s"  var ${serializeWithType(s.sym)}; // ${s.lbl}")
+    lines ++= sys.next.map(s => s"  var ${serializeWithType(s.sym)}; // ${s.lbl}")
     lines += ""
     lines += "  init {"
     evaluateSignals(sys, lines)
@@ -49,7 +49,7 @@ class Uclid5Serializer private() {
   }
 
   private def evaluateSignals(sys: TransitionSystem, lines: mutable.ArrayBuffer[String]): Unit = {
-    lines ++= sys.signals.flatMap { s =>
+    lines ++= sys.next.flatMap { s =>
       List(s"    ${escapeIdentifier(s.name)} = ${serialize(s.e)};") ++ (s.lbl match {
         case IsConstraint => List(s"    assume(${escapeIdentifier(s.name)});")
         case IsBad => List(s"    assert(!${escapeIdentifier(s.name)});")

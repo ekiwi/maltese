@@ -26,7 +26,7 @@ object Namespace {
   def apply(): Namespace = new Namespace(mutable.HashSet())
   def apply(sys: TransitionSystem): Namespace = {
     new Namespace(mutable.HashSet() ++
-      sys.inputs.map(_.name) ++ sys.states.map(_.sym.name) ++ sys.signals.map(_.name)
+      sys.inputs.map(_.name) ++ sys.states.map(_.sym.name) ++ sys.next.map(_.name)
     )
   }
 

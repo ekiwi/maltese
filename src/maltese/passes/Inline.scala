@@ -28,7 +28,7 @@ class Inline(inlineEverything: Boolean = false) extends Pass {
 
   override def run(sys: TransitionSystem): TransitionSystem = {
     val doInline = if(inlineEverything) {
-      sys.signals.map(_.name).toSet
+      sys.next.map(_.name).toSet
     } else {
       findSignalsToInline(sys)
     }
@@ -38,12 +38,12 @@ class Inline(inlineEverything: Boolean = false) extends Pass {
     } else {
       val inlineExpr = mutable.HashMap[String, SMTExpr]()
       implicit val ctx: InliningContext = new InliningContext(doInline.contains, inlineExpr.get)
-      val signals = sys.signals.map { signal =>
+      val signals = sys.next.map { signal =>
         val inlinedE = replaceSymbols(signal.e, false, false)
         inlineExpr(signal.name) = inlinedE
         signal.copy(e = inlinedE)
       }
-      sys.copy(signals = signals)
+      sys.copy(next = signals)
     }
   }
 
@@ -77,12 +77,12 @@ class Inline(inlineEverything: Boolean = false) extends Pass {
 
   protected def findSignalsToInline(sys: TransitionSystem): Set[String] = {
     // count how often a symbol is used
-    val useCount = Analysis.countUses(sys.signals.map(_.e))
-    val onlyUsedOnce = sys.signals.filter(s => useCount(s.name) <= InlineUseMax).map(_.name).toSet
+    val useCount = Analysis.countUses(sys.next.map(_.e))
+    val onlyUsedOnce = sys.next.filter(s => useCount(s.name) <= InlineUseMax).map(_.name).toSet
     // we also want to inline signals that are only aliases
-    val leafSignals = if(InlineLeaves) sys.signals.filter(s => isLeafExpr(s.e)).map(_.name).toSet else Set[String]()
+    val leafSignals = if(InlineLeaves) sys.next.filter(s => isLeafExpr(s.e)).map(_.name).toSet else Set[String]()
     // only regular node signals can be inlined
-    val canBeInlined = sys.signals.filter(_.lbl == IsNode).map(_.name).toSet
+    val canBeInlined = sys.next.filter(_.lbl == IsNode).map(_.name).toSet
 
     onlyUsedOnce.union(leafSignals).intersect(canBeInlined)
   }

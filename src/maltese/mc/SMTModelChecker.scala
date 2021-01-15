@@ -5,7 +5,7 @@
 package maltese.mc
 
 import maltese.smt
-import maltese.smt.{Comment, DeclareFunction, DeclareUninterpretedSort, DeclareUninterpretedSymbol, DefineFunction, SMTCommand, solvers}
+import maltese.smt.{BVSymbol, Comment, DeclareFunction, DeclareUninterpretedSort, DeclareUninterpretedSymbol, DefineFunction, SMTCommand, solvers}
 
 import scala.collection.mutable
 
@@ -45,8 +45,8 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
     enc.defineHeader(solver)
     enc.init(solver)
 
-    val constraints = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
-    val bads = sys.signals.filter(_.lbl == IsBad).map(_.name)
+    val constraints = sys.next.filter(_.lbl == IsConstraint).map(_.name)
+    val bads = sys.next.filter(_.lbl == IsBad).map(_.name)
 
     (0 to kMax).foreach { k =>
       // assume all constraints hold in this step
@@ -105,10 +105,10 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
   private def getWitness(sys: TransitionSystem, enc: SMTEncoding, kMax: Int, failedBad: Seq[Int]): Witness = {
     // btor2 numbers states in the order that they are declared in starting at zero
     val stateInit = sys.states.zipWithIndex.map {
-      case (BVState(sym, _, _), ii) =>
+      case (sym: smt.BVSymbol, ii) =>
         val value = solver.getValue(enc.getSignalAt(sym, 0)).get
         (Some(ii -> value), None)
-      case (ArrayState(sym, _, _), ii) =>
+      case (sym: smt.ArraySymbol, ii) =>
         val value = solver.getValue(enc.getSignalAt(sym, 0))
         (None, Some(ii -> value))
     }
@@ -238,26 +238,24 @@ object SMTTransitionSystemEncoder {
       cmds += DeclareFunction(s, List(State))
     }
     sys.inputs.foreach(i => declare(i, "input"))
-    sys.states.foreach(s => declare(s.sym, "register"))
+    sys.states.foreach(s => declare(s, "register"))
 
     // signals are just functions of other signals, inputs and state
     def define(sym: smt.SMTSymbol, e: smt.SMTExpr, suffix: String = SignalSuffix): Unit = {
       cmds += DefineFunction(sym.name + suffix, List(State), replaceSymbols(SignalSuffix, State)(e))
     }
+
+    val statesWithNext = mutable.ListBuffer[smt.SMTSymbol]()
+    val statesWithInit = mutable.ListBuffer[smt.SMTSymbol]()
     sys.signals.foreach { signal =>
       val sym = signal.sym
-      cmds ++= toDescription(sym, lblToKind(signal.lbl), comments.get)
-      define(sym, signal.e)
-    }
-
-    // define the next and init functions for all states
-    sys.states.foreach { state =>
-      assert(state.next.nonEmpty, "Next function required")
-      define(state.sym, state.next.get, NextSuffix)
-      // init is optional
-      state.init.foreach { init =>
-        define(state.sym, init, InitSuffix)
+      val suffix = signal.lbl match {
+        case IsInit => statesWithInit.append(sym) ; InitSuffix
+        case IsNext => statesWithNext.append(sym) ; NextSuffix
+        case _ => SignalSuffix
       }
+      cmds ++= toDescription(sym, lblToKind(signal.lbl), comments.get)
+      define(sym, signal.e, suffix)
     }
 
     def defineConjunction(e: Iterable[smt.BVExpr], suffix: String): Unit = {
@@ -266,9 +264,9 @@ object SMTTransitionSystemEncoder {
 
     // the transition relation asserts that the value of the next state is the next value from the previous state
     // e.g., (reg state_n) == (reg_next state)
-    val transitionRelations = sys.states.map { state =>
-      val newState = replaceSymbols(SignalSuffix, StateNext)(state.sym)
-      val nextOldState = replaceSymbols(NextSuffix, State)(state.sym)
+    val transitionRelations = statesWithNext.map { state =>
+      val newState = replaceSymbols(SignalSuffix, StateNext)(state)
+      val nextOldState = replaceSymbols(NextSuffix, State)(state)
       smt.SMTEqual(newState, nextOldState)
     }
     // the transition relation is over two states
@@ -276,17 +274,17 @@ object SMTTransitionSystemEncoder {
     cmds += DefineFunction(name + "_t", List(State, StateNext), transitionExpr)
 
     // The init relation just asserts that all init function hold
-    val initRelations = sys.states.filter(_.init.isDefined).map { state =>
-      val stateSignal = replaceSymbols(SignalSuffix, State)(state.sym)
-      val initSignal = replaceSymbols(InitSuffix, State)(state.sym)
+    val initRelations = statesWithInit.map { state =>
+      val stateSignal = replaceSymbols(SignalSuffix, State)(state)
+      val initSignal = replaceSymbols(InitSuffix, State)(state)
       smt.SMTEqual(stateSignal, initSignal)
     }
     defineConjunction(initRelations, "_i")
 
     // assertions and assumptions
-    val bads = sys.signals.filter(_.lbl == IsBad).map(a => replaceSymbols(SignalSuffix, State)(a.sym))
+    val bads = sys.next.filter(_.lbl == IsBad).map(a => replaceSymbols(SignalSuffix, State)(a.sym))
     defineConjunction(bads.map(_.asInstanceOf[smt.BVExpr]), BadSuffix)
-    val assumptions = sys.signals.filter(_.lbl == IsConstraint).map(a => replaceSymbols(SignalSuffix, State)(a.sym))
+    val assumptions = sys.next.filter(_.lbl == IsConstraint).map(a => replaceSymbols(SignalSuffix, State)(a.sym))
     defineConjunction(assumptions.map(_.asInstanceOf[smt.BVExpr]), AssumptionSuffix)
 
     cmds
