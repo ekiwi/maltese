@@ -6,7 +6,7 @@ package maltese.mc
 
 import maltese.smt
 import maltese.smt.BVSymbol
-import treadle.{random, vcd}
+import treadle.vcd
 
 import scala.collection.mutable
 
