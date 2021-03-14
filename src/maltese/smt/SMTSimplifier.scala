@@ -88,8 +88,6 @@ object SMTSimplifier {
     case BVOp(Op.Or, True(), _) => BVLiteral(1, 1)
     case BVOp(Op.Or, a, False()) => a
     case BVOp(Op.Or, False(), b) => b
-    case BVOp(Op.Or, BVNot(a), b) => BVImplies(a, b)
-    case BVOp(Op.Or, b, BVNot(a)) => BVImplies(a, b)
     case other => other
   }
 
@@ -177,6 +175,7 @@ object SMTSimplifier {
       case BVOp(op, _, _) => SMTExprEval.doBVOp(op, a, b, expr.width)
       case BVComparison(op, _, _, signed) => SMTExprEval.doBVCompare(op, a, b, expr.a.width, signed)
       case _: BVConcat => SMTExprEval.doBVConcat(a, b, bWidth = expr.b.width)
+      case _: BVImplies => SMTExprEval.doBVImplies(a, b)
       case other => throw new NotImplementedError(s"Unexpected expression: $other")
     }
     BVLiteral(r, expr.width)

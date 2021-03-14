@@ -4,14 +4,16 @@
 
 package maltese.mc
 
-import java.io.PrintWriter
+import maltese.passes.ExpandQuantifiers
 
+import java.io.PrintWriter
 import scala.collection.mutable
 import scala.sys.process._
 
 class BtormcModelChecker extends Btor2ModelChecker {
   // TODO: check to make sure binary exists
   override val name: String = "btormc"
+  override val prefix: String = "btormc"
   override val supportsOutput: Boolean = false
   override protected def makeArgs(kMax: Int, inputFile: Option[String]): Seq[String] = {
     val prefix = if(kMax > 0) Seq("btormc", s"--kmax $kMax") else Seq("btormc")
@@ -29,6 +31,7 @@ class BtormcModelChecker extends Btor2ModelChecker {
 class Cosa2ModelChecker extends Btor2ModelChecker {
   // TODO: check to make sure binary exists
   override val name: String = "cosa2"
+  override val prefix: String = "btormc"
   override val supportsOutput: Boolean = true
   override val supportsMultipleProperties: Boolean = false
   override protected def makeArgs(kMax: Int, inputFile: Option[String]): Seq[String] = {
@@ -53,11 +56,14 @@ class Cosa2ModelChecker extends Btor2ModelChecker {
 
 abstract class Btor2ModelChecker extends IsModelChecker {
   override val name: String
+  override val fileExtension: String = ".btor2"
   protected def makeArgs(kMax: Int, inputFile: Option[String] = None): Seq[String]
   val supportsOutput: Boolean
   val supportsMultipleProperties: Boolean = true
   override def check(sys: TransitionSystem, kMax: Int = -1, fileName: Option[String] = None): ModelCheckResult = {
-    val checkSys = if(supportsMultipleProperties) sys else TransitionSystem.combineProperties(sys)
+    val features = TransitionSystem.analyzeFeatures(sys)
+    val quantifierFree = if(features.hasQuantifiers) new ExpandQuantifiers().run(sys) else sys
+    val checkSys = if(supportsMultipleProperties) quantifierFree else TransitionSystem.combineProperties(quantifierFree)
     fileName match {
       case None => throw new NotImplementedError("Currently only file based model checking is supported!")
       case Some(file) => checkWithFile(file, checkSys, kMax)

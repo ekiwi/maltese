@@ -16,8 +16,10 @@ object SMTModelCheckerOptions {
 }
 
 /** SMT based bounded model checking as an alternative to dispatching to a btor2 based external solver */
-class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = SMTModelCheckerOptions.Default) extends IsModelChecker {
+class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = SMTModelCheckerOptions.Performance, printProgress: Boolean = false) extends IsModelChecker {
   override val name: String = "SMTModelChecker with " + solver.name
+  override val prefix: String = solver.name
+  override val fileExtension: String = ".smt2"
   override val supportsUF: Boolean = true
   override val supportsQuantifiers: Boolean = solver.supportsQuantifiers
 
@@ -49,6 +51,8 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
     val bads = sys.signals.filter(_.lbl == IsBad).map(_.name)
 
     (0 to kMax).foreach { k =>
+      if(printProgress) println(s"Step #$k")
+
       // assume all constraints hold in this step
       constraints.foreach(c => solver.assert(enc.getConstraint(c)))
 
@@ -61,17 +65,22 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
       if(options.checkBadStatesIndividually) {
         // check each bad state individually
         bads.zipWithIndex.foreach { case (b, bi) =>
+          if(printProgress) print(s"- b$bi? ")
+
           solver.push()
           solver.assert(enc.getBadState(b))
           val res = solver.check(produceModel = false)
 
           // did we find an assignment for which the bad state is true?
           if(res.isSat) {
+            if(printProgress) println("❌")
             val w = getWitness(sys, enc, k, Seq(bi))
             solver.pop()
             solver.pop()
             assert(solver.stackDepth == 0, s"Expected solver stack to be empty, not: ${solver.stackDepth}")
             return ModelCheckFail(w)
+          } else {
+            if(printProgress) println("✅")
           }
           solver.pop()
         }
@@ -106,8 +115,10 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
     // btor2 numbers states in the order that they are declared in starting at zero
     val stateInit = sys.states.zipWithIndex.map {
       case (State(sym: smt.BVSymbol, _, _), ii) =>
-        val value = solver.getValue(enc.getSignalAt(sym, 0)).get
-        (Some(ii -> value), None)
+        solver.getValue(enc.getSignalAt(sym, 0)) match {
+          case Some(value) => (Some(ii -> value), None)
+          case None => (None, None)
+        }
       case (State(sym: smt.ArraySymbol, _, _), ii) =>
         val value = solver.getValue(enc.getSignalAt(sym, 0))
         (None, Some(ii -> value))
@@ -117,9 +128,8 @@ class SMTModelChecker(val solver: smt.Solver, options: SMTModelCheckerOptions = 
     val memInit = stateInit.flatMap(_._2).toMap
 
     val inputs = (0 to kMax).map { k =>
-      sys.inputs.zipWithIndex.map { case (input, i) =>
-        val value = solver.getValue(enc.getSignalAt(input, k)).get
-        i -> value
+      sys.inputs.zipWithIndex.flatMap { case (input, i) =>
+        solver.getValue(enc.getSignalAt(input, k)).map(value => i -> value)
       }.toMap
     }
 

@@ -88,12 +88,23 @@ case class BVEqual(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
   override def reapply(nA: BVExpr, nB: BVExpr) = BVEqual(nA, nB)
 }
 // added as a separate node because it is used a lot in model checking and benefits from pretty printing
-case class BVImplies(a: BVExpr, b: BVExpr) extends BVBinaryExpr {
+class BVImplies(val a: BVExpr, val b: BVExpr) extends BVBinaryExpr {
   assert(a.width == 1, s"The antecedent needs to be a boolean expression!")
   assert(b.width == 1, s"The consequent needs to be a boolean expression!")
   override def width: Int = 1
-  override def reapply(nA: BVExpr, nB: BVExpr) = BVImplies(nA, nB)
+  override def reapply(nA: BVExpr, nB: BVExpr) = new BVImplies(nA, nB)
 }
+object BVImplies {
+  def apply(a: BVExpr, b: BVExpr): BVExpr = (a,b) match {
+    case (True(), b) => b         // (!1 || b) = b
+    case (False(), _) => True()   // (!0 || _) = (1 || _) = 1
+    case (_, True()) => True()    // (!a || 1) = 1
+    case (a, False()) => BVNot(a) // (!a || 0) = !a
+    case (a, b) => new BVImplies(a, b)
+  }
+  def unapply(i: BVImplies): Some[(BVExpr, BVExpr)] = Some((i.a, i.b))
+}
+
 object Compare extends Enumeration {
   val Greater, GreaterEqual = Value
 }
@@ -207,20 +218,34 @@ sealed trait SMTFunctionArg
 case class UTSymbol(name: String, tpe: String) extends SMTFunctionArg
 
 object BVAnd {
-  def apply(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.And, a, b)
+  def apply(a: BVExpr, b: BVExpr): BVExpr = (a,b) match {
+    case (True(), b) => b
+    case (a, True()) => a
+    case (False(), _) => False()
+    case (_, False()) => False()
+    case (a, b) => BVOp(Op.And, a, b)
+  }
   def apply(exprs: Iterable[BVExpr]): BVExpr = {
     assert(exprs.nonEmpty, "Don't know what to do with an empty list!")
     val nonTriviallyTrue = exprs.filterNot(_ == True())
     if(nonTriviallyTrue.isEmpty) { True() } else { nonTriviallyTrue.reduce(apply) }
   }
+  def unapply(e: BVOp): Option[(BVExpr, BVExpr)] = if(e.op == Op.And) Some((e.a, e.b)) else None
 }
 object BVOr {
-  def apply(a: BVExpr, b: BVExpr): BVOp = BVOp(Op.Or, a, b)
+  def apply(a: BVExpr, b: BVExpr): BVExpr = (a,b) match {
+    case (True(), _) => True()
+    case (_, True()) => True()
+    case (False(), b) => b
+    case (a, False()) => a
+    case (a, b) => BVOp(Op.Or, a, b)
+  }
   def apply(exprs: Iterable[BVExpr]): BVExpr = {
     assert(exprs.nonEmpty, "Don't know what to do with an empty list!")
     val nonTriviallyFalse = exprs.filterNot(_ == False())
     if(nonTriviallyFalse.isEmpty) { False() } else { nonTriviallyFalse.reduce(apply) }
   }
+  def unapply(e: BVOp): Option[(BVExpr, BVExpr)] = if(e.op == Op.Or) Some((e.a, e.b)) else None
 }
 
 object SMTEqual {
