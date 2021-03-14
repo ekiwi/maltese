@@ -26,11 +26,11 @@ object Maltese {
   private val passes: Iterable[Pass] = Seq(
     Simplify,
     new Inline,
-    DeadCodeElimination,
+    new DeadCodeElimination(removeUnusedInputs = true),
 
     Simplify,
     new Inline,
-    DeadCodeElimination,
+    new DeadCodeElimination(removeUnusedInputs = true),
 
     Simplify,
 
