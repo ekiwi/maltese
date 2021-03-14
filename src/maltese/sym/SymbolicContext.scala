@@ -4,8 +4,9 @@
 
 package maltese.sym
 
-import net.sf.javabdd.BDD
+import com.github.javabdd.BDD
 import maltese.smt._
+import maltese.bdd._
 
 class SymbolicContext(val opts: Options) {
   private val solver = opts.makeSolver()

@@ -5,7 +5,7 @@
 package maltese.sym
 
 import maltese.smt._
-import net.sf.javabdd.{BDD, JFactory}
+import com.github.javabdd.BDD
 
 sealed trait ValueSummary {
   def size: Int

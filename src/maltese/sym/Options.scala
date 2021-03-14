@@ -5,7 +5,7 @@
 package maltese.sym
 
 import maltese.smt.solvers.{Solver, Yices2}
-import net.sf.javabdd.{BDDFactory, JFactory}
+import com.github.javabdd.{BDDFactory, JFactory}
 
 case class Options(
   // MultiSE 3.2: without coalescing we get an algorithm that behaves essentially like conventional DSE
