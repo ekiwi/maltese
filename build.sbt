@@ -22,5 +22,12 @@ libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.1" % "test
 // fork tests as native libraries aren't necessarily thread safe
 Test / fork := true
 
+// antlr for youverify parsing
+antlr4GenVisitor in Antlr4 := true
+antlr4GenListener in Antlr4 := false
+antlr4PackageName in Antlr4 := Option("firrtl.antlr")
+antlr4Version in Antlr4 := "4.8"
+javaSource in Antlr4 := baseDirectory.value / "antlr4"
+
 scalaSource in Compile := baseDirectory.value / "src"
 scalaSource in Test := baseDirectory.value / "test"

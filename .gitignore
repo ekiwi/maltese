@@ -22,3 +22,6 @@
 /*.hprof
 /*.txt
 /*.svg
+
+# btor2 files
+/*.btor2
