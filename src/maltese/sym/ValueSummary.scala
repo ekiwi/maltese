@@ -9,6 +9,8 @@ import com.github.javabdd.BDD
 
 sealed trait ValueSummary {
   def size: Int
+  def isSymbolic: Boolean = !isConcrete
+  def isConcrete: Boolean
 }
 
 object BVValueSummary {
@@ -117,4 +119,8 @@ class BVValueSummary private(private val ctx: SymbolicContext,
     SMTSimplifier.simplify(BVValueSummary.toSMT(this)).toString
   } else { s"ValueSummary w/ $size entries" }
   override def size = entries.size
+  override def isConcrete = (size == 1) && entries.head.value.isInstanceOf[BVLiteral]
+  override def value: Option[BigInt] = if(isConcrete) {
+    Some(entries.head.value.asInstanceOf[BVLiteral].value)
+  } else { None }
 }

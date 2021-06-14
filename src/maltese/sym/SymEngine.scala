@@ -1,4 +1,4 @@
-// Copyright 2020 The Regents of the University of California
+// Copyright 2020-2021 The Regents of the University of California
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
@@ -19,63 +19,89 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
+  /** edges from result to arguments */
+  private val uses = mutable.HashMap[Cell, List[Cell]]()
   private implicit val ctx = new SymbolicContext(opts)
 
-  def signalAt(name: String, step: Int): BVValueSummary = {
+  def signalAt(name: String, step: Int): BVValueSummary = signalAt(Cell(name, step))
+
+  private def signalAt(cell: Cell): BVValueSummary = {
+    val step = cell.step
     if(results.size < step + 1) {
       (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
     }
     val frame = results(step)
-    if(!frame.contains(name)) {
-      frame(name) = computeSignalAt(name, step)
-    }
-    val r = frame(name)
+    val r = frame.getOrElseUpdate(cell.signal, computeCell(cell))
     if(r.size > 1000) {
-      println(s"WARN: $name@$step.size = ${r.size} > 1k")
+      println(s"WARN: ${cell.id}.size = ${r.size} > 1k")
     }
     // println(s"$name@$step: $r")
     r
   }
 
-  private def computeSignalAt(name: String, step: Int): BVValueSummary = {
-    if(signals.contains(name)) {
-      eval(signals(name).e.asInstanceOf[BVExpr], step)
-    } else if(inputs.contains(name)) {
-      inputAt(name, step)
-    } else if(states.contains(name)) {
-      stateAt(name, step)
-    } else {
-      throw new RuntimeException(s"Unknown signal $name @ $step")
+  /** removes the result from this cell as well as any cells that depend on it */
+  private def invalidate(cell: Cell): Unit = {
+    // if the step has not been computed yet, there is nothing to invalidate
+    if(results.size < cell.step + 1) return
+
+    // remove the result from the frame
+    val frame = results(cell.step)
+    frame.remove(cell.signal)
+
+    // remove any cells that depend on this cell
+    uses.get(cell) match {
+      case None =>
+      case Some(Nil) =>
+        uses.remove(cell)
+      case Some(u) =>
+        u.foreach(invalidate)
+        uses.remove(cell)
     }
   }
-  private def eval(expr: BVExpr, step: Int): BVValueSummary = expr match {
-    case BVSymbol(name, _) => signalAt(name, step)
+
+  private def computeCell(cell: Cell): BVValueSummary = {
+    val name = cell.signal
+    if(signals.contains(name)) {
+      eval(signals(name).e.asInstanceOf[BVExpr], cell)
+    } else if(inputs.contains(name)) {
+      inputAt(cell)
+    } else if(states.contains(name)) {
+      stateAt(cell)
+    } else {
+      throw new RuntimeException(s"Unknown signal ${cell.id}")
+    }
+  }
+  private def eval(expr: BVExpr, cell: Cell): BVValueSummary = expr match {
+    case BVSymbol(name, _) =>
+      val prevCell = cell.copy(signal = name)
+      // track cell dependencies
+      uses(prevCell) = cell +: uses.getOrElse(prevCell, List())
+      signalAt(prevCell)
     case l : BVLiteral => BVValueSummary(l)
-    case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, step), u.reapply)
-    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, step), eval(u.b, step), u.reapply)
-    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, step), eval(tru, step), eval(fals, step))
+    case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, cell), u.reapply)
+    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, cell), eval(u.b, cell), u.reapply)
+    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, cell), eval(tru, cell), eval(fals, cell))
     case other => throw new RuntimeException(s"Unexpected expression: $other")
   }
 
 
-  private def stateAt(name: String, step: Int): BVValueSummary = {
-    val state = states(name)
-    if(step == 0) {
+  private def stateAt(cell: Cell): BVValueSummary = {
+    val state = states(cell.signal)
+    if(cell.step == 0) {
       if(state.init.isDefined && !noInit) {
-        signalAt(name + ".init", 0)
+        signalAt(state.name + ".init", 0)
       } else {
-        val sym = symbols.getOrElseUpdate(name + "@0", SMTSymbol.fromExpr(name + "@0", state.sym).asInstanceOf[BVSymbol])
+        val sym = symbols.getOrElseUpdate(state.name + "@0", SMTSymbol.fromExpr(state.name + "@0", state.sym).asInstanceOf[BVSymbol])
         BVValueSummary(sym)
       }
     } else {
-      assert(step > 0)
-      signalAt(name + ".next", step - 1)
+      assert(cell.step > 0)
+      signalAt(Cell(state.name + ".next", cell.step - 1))
     }
   }
 
-  private def inputAt(name: String, step: Int): BVValueSummary = {
-    val id = name + "@" + step
-    val sym = symbols.getOrElseUpdate(id, BVSymbol(id, inputs(name).width))
+  private def inputAt(cell: Cell): BVValueSummary = {
+    val sym = symbols.getOrElseUpdate(cell.id, BVSymbol(cell.id, inputs(cell.signal).width))
     BVValueSummary(sym)
   }
   private def symbols = mutable.HashMap[String, BVSymbol]()
@@ -83,4 +109,8 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   def printStatistics(): Unit = {
     ctx.printStatistics()
   }
+}
+
+private case class Cell(signal: String, step: Int) {
+  def id: String = signal + "@" + step
 }
