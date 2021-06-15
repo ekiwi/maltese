@@ -1,4 +1,4 @@
-// Copyright 2020 The Regents of the University of California
+// Copyright 2020-2021 The Regents of the University of California
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
@@ -120,7 +120,7 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   } else { s"ValueSummary w/ $size entries" }
   override def size = entries.size
   override def isConcrete = (size == 1) && entries.head.value.isInstanceOf[BVLiteral]
-  override def value: Option[BigInt] = if(isConcrete) {
+  def value: Option[BigInt] = if(isConcrete) {
     Some(entries.head.value.asInstanceOf[BVLiteral].value)
   } else { None }
 }

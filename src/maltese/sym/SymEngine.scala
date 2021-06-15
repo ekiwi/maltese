@@ -18,6 +18,7 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val inputs = sys.inputs.map(i => i.name -> i).toMap
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
+  private val validCellName = (sys.inputs.map(_.name) ++ sys.states.map(_.name) ++ sys.signals.map(_.name)).toSet
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
   /** edges from result to arguments */
   private val uses = mutable.HashMap[Cell, List[Cell]]()
@@ -26,11 +27,7 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   def signalAt(name: String, step: Int): BVValueSummary = signalAt(Cell(name, step))
 
   private def signalAt(cell: Cell): BVValueSummary = {
-    val step = cell.step
-    if(results.size < step + 1) {
-      (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
-    }
-    val frame = results(step)
+    val frame = getFrame(cell.step)
     val r = frame.getOrElseUpdate(cell.signal, computeCell(cell))
     if(r.size > 1000) {
       println(s"WARN: ${cell.id}.size = ${r.size} > 1k")
@@ -57,6 +54,22 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
         u.foreach(invalidate)
         uses.remove(cell)
     }
+  }
+
+  /** allocates the frame if necessary */
+  private def getFrame(step: Int): mutable.HashMap[String, BVValueSummary] = {
+    if(results.size < step + 1) {
+      (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
+    }
+    results(step)
+  }
+
+  def set(name: String, step: Int, value: BVValueSummary): Unit = {
+    assert(validCellName(name), f"Unknown cell $name")
+    val cell = Cell(name, step)
+    invalidate(cell)
+    val frame = getFrame(cell.step)
+    frame(name) = value
   }
 
   private def computeCell(cell: Cell): BVValueSummary = {
@@ -105,6 +118,18 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     BVValueSummary(sym)
   }
   private def symbols = mutable.HashMap[String, BVSymbol]()
+
+  def makeSymbol(name: String, width: Int): BVValueSummary = {
+    symbols.get(name) match {
+      case Some(sym) =>
+        assert(sym.width == width)
+        BVValueSummary(sym)
+      case None =>
+        val sym = BVSymbol(name, width)
+        symbols(name) = sym
+        BVValueSummary(sym)
+    }
+  }
 
   def printStatistics(): Unit = {
     ctx.printStatistics()
