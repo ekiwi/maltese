@@ -4,21 +4,29 @@
 
 package chiseltest.symbolic
 
-import maltese.Maltese.simplifySystem
 import maltese.mc
 import maltese.mc._
-import maltese.passes.{DeadCodeElimination, Inline, Pass, Simplify}
+import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, Simplify}
 import maltese.sym._
 
 import java.io.File
 
 
-class SymbolicSim(sys: TransitionSystem) {
+class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
+  // we do not support assumptions at the moment
+  private val assumptions =  sys.signals.filter(_.lbl == IsConstraint)
+  require(assumptions.isEmpty, "Assumptions are currently not supported!")
+
+  // we need to assertion names if we want to check them
+  private val assertions = sys.signals.filter(_.lbl == IsBad).map(_.name)
+
   private val engine = SymEngine(sys, noInit = false)
   private var cycleCount = 0
+  doCheckAsserts() // check assertions in initial state
 
   def step(): Unit = {
     cycleCount += 1
+    doCheckAsserts()
   }
 
   def peek(signal: String): Value = {
@@ -33,8 +41,18 @@ class SymbolicSim(sys: TransitionSystem) {
     new Value(engine.makeSymbol(name, width))
   }
 
-  def assert(v: Value): Unit = {
-    // TODO: check if always valid!
+  def assert(v: Value, msg: => String = ""): Unit = {
+    val e = Value.getValueSummary(v)
+    val isSat = Value.getValueSummary(v).isSat
+    if(isSat) {
+      throw new RuntimeException(s"Assertion failed! $msg")
+    }
+  }
+
+  private def doCheckAsserts(): Unit = if(!ignoreAsserts) {
+    assertions.foreach{ a =>
+      assert(peek(a), s"$a in cycle $cycleCount")
+    }
   }
 }
 
@@ -42,6 +60,10 @@ class SymbolicSim(sys: TransitionSystem) {
 class Value(private val e: BVValueSummary) {
   def isSymbolic: Boolean = e.isSymbolic
   def isConcrete: Boolean = e.isConcrete
+  override def toString = e.value match {
+    case Some(value) => "Value(" + value + ")"
+    case None => "Value(" + e.toString + ")"
+  }
 }
 
 private object Value {
@@ -52,20 +74,24 @@ private object Value {
 object SymbolicSim {
   // TODO: add function to start with firrtl or a Chisel circuit
 
-  def loadBtor(filename: String): SymbolicSim = {
+  def loadBtor(filename: String): SymbolicSim = loadBtor(filename, false)
+  def loadBtor(filename: String, ignoreAsserts: Boolean): SymbolicSim = {
     // load transition system from file
     val sys = mc.Btor2.load(new File(filename))
     val simplified = simplifySystem(sys)
-    new SymbolicSim(simplified)
+    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
   }
 
-  def loadBtor(src: String, name: String): SymbolicSim = {
+  def loadBtor(src: String, name: String): SymbolicSim = loadBtor(src, name, false)
+  def loadBtor(src: String, name: String, ignoreAsserts: Boolean): SymbolicSim = {
     val sys = mc.Btor2.read(src = src, defaultName = name)
     val simplified = simplifySystem(sys)
-    new SymbolicSim(simplified)
+    if(verbose) { println(simplified.serialize) }
+    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
   }
 
-
+  private val verbose = false
+  private def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = verbose)
   private val passes: Iterable[Pass] = Seq(
     Simplify,
     new Inline,

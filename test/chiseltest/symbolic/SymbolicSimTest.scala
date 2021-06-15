@@ -11,8 +11,17 @@ class SymbolicSimTest extends AnyFlatSpec {
   behavior of "SymbolicSim"
 
   it should "be able to load a simple btor file" in {
-    val src = FileUtils.getTextResource("/btormc/count2.btor")
+    val src = FileUtils.getTextResource("/btormc/count2.btor2")
     val sim = SymbolicSim.loadBtor(src, "count2")
+
+    // count2 starts at 0, increments by 1 every cycle, should fail at 7
+    (0 until 6).foreach { _ =>
+      sim.step()
+    }
+    val e = intercept[RuntimeException] {
+      sim.step()
+    }
+    assert(e.toString.contains("cycle 7"))
   }
 
 }

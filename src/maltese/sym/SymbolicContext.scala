@@ -17,6 +17,22 @@ class SymbolicContext(val opts: Options) {
     // TODO: add optimizations and caching
     solver.check(expr, false).isUnSat
   }
+  def isSat(value: BVValueSummary): Boolean = {
+    assert(value.width == 1, "satisfiability checks require a boolean formula")
+    value.value match {
+      case Some(v) => v == 1
+      case None => solver.check(value.symbolic, produceModel = false).isSat
+    }
+  }
+  def isValid(value: BVValueSummary): Boolean = {
+    assert(value.width == 1, "validity checks require a boolean formula")
+    value.value match {
+      case Some(v) => v == 1
+      case None =>
+        // if the inverted value cannot be true, then the original value is always valid
+        solver.check(BVNot(value.symbolic), produceModel = false).isUnSat
+    }
+  }
 
   ///////////////// BDDs
   private val bddConverter = new BDDToSMTConverter(opts.makeBdds(), opts.ConvertBooleanOpsInSmtToBdd)

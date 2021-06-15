@@ -94,7 +94,13 @@ object BVValueSummary {
   }
 
   private def toSMT(v: BVValueSummary): BVExpr = {
-    if(v.entries.size == 1) { v.entries.head.value } else {
+    if(v.entries.size == 1) {
+      v.entries.head.value
+    } else if(v.width == 1) { // for 1-bit values, we just build a boolean formula
+      val ctx = v.ctx
+      val tru = v.entries.map(e => e.guard.and(ctx.smtToBdd(e.value))).reduce((a,b) => a.or(b))
+      ctx.bddToSmt(tru)
+    } else {
       v.entries.drop(1).foldLeft(v.entries.head.value) { (a: BVExpr, b: BVEntry) =>
         val cond = v.ctx.bddToSmt(b.guard)
         val args = cond match {
@@ -123,4 +129,7 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   def value: Option[BigInt] = if(isConcrete) {
     Some(entries.head.value.asInstanceOf[BVLiteral].value)
   } else { None }
+  def symbolic: BVExpr = BVValueSummary.toSMT(this)
+  def isValid: Boolean = ctx.isValid(this)
+  def isSat: Boolean = ctx.isSat(this)
 }
