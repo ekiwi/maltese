@@ -10,6 +10,7 @@ import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, Simplify}
 import maltese.sym._
 
 import java.io.File
+import scala.collection.mutable
 
 
 class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
@@ -20,12 +21,18 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   // we need to assertion names if we want to check them
   private val assertions = sys.signals.filter(_.lbl == IsBad).map(_.name)
 
+  // we need to cache the input assignment to retain the in the next cycle
+  private val isInput = sys.inputs.map(_.name).toSet
+  private val inputAssignments = mutable.HashMap[String, BVValueSummary]()
+
   private val engine = SymEngine(sys, noInit = false)
   private var cycleCount = 0
   doCheckAsserts() // check assertions in initial state
 
   def step(): Unit = {
     cycleCount += 1
+    // apply any "sticky" pokes
+    inputAssignments.foreach { case (signal, value) => engine.set(signal, cycleCount, value) }
     doCheckAsserts()
   }
 
@@ -33,8 +40,15 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
     new Value(engine.signalAt(signal, cycleCount))
   }
 
+  def poke(signal: String, value: BigInt): Unit = {
+    val vs = engine.set(signal, cycleCount, value)
+    if(isInput(signal)) { inputAssignments(signal) = vs }
+  }
+
   def poke(signal: String, value: Value): Unit = {
-    engine.set(signal, cycleCount, Value.getValueSummary(value))
+    val vs = Value.getValueSummary(value)
+    engine.set(signal, cycleCount, vs)
+    if(isInput(signal)) { inputAssignments(signal) = vs }
   }
 
   def makeSymbol(name: String, width: Int): Value = {
@@ -42,7 +56,6 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   }
 
   def assert(v: Value, msg: => String = ""): Unit = {
-    val e = Value.getValueSummary(v)
     val isSat = Value.getValueSummary(v).isSat
     if(isSat) {
       throw new RuntimeException(s"Assertion failed! $msg")
@@ -60,6 +73,12 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
 class Value(private val e: BVValueSummary) {
   def isSymbolic: Boolean = e.isSymbolic
   def isConcrete: Boolean = e.isConcrete
+  def getValue: BigInt = e.value match {
+    case Some(v) => v
+    case None => throw new RuntimeException(
+      s"Value is symbolic: ${e.symbolic}"
+    )
+  }
   override def toString = e.value match {
     case Some(value) => "Value(" + value + ")"
     case None => "Value(" + e.toString + ")"

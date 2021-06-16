@@ -19,6 +19,9 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val states = sys.states.map(s => s.sym.name -> s).toMap
   private val signals = sys.signals.map(s => s.name -> s).toMap
   private val validCellName = (sys.inputs.map(_.name) ++ sys.states.map(_.name) ++ sys.signals.map(_.name)).toSet
+  private val getWidth = (sys.inputs.map(i => i.name -> i.width) ++
+    sys.states.map(_.sym).collect{ case BVSymbol(name, width) => name -> width } ++
+    sys.signals.collect{ case maltese.mc.Signal(name, e: BVExpr, _) => name -> e.width }).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
   /** edges from result to arguments */
   private val uses = mutable.HashMap[Cell, List[Cell]]()
@@ -70,6 +73,13 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     invalidate(cell)
     val frame = getFrame(cell.step)
     frame(name) = value
+  }
+
+  def set(name: String, step: Int, value: BigInt): BVValueSummary = {
+    assert(validCellName(name), f"Unknown cell $name")
+    val vs = BVValueSummary(BVLiteral(value, getWidth(name)))
+    set(name, step, vs)
+    vs
   }
 
   private def computeCell(cell: Cell): BVValueSummary = {
