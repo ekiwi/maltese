@@ -58,7 +58,42 @@ class SymbolicSimTest extends AnyFlatSpec {
       sim.step()
     }
     assert(e.toString.contains("cycle 6"))
+    assert(e.toString.contains("always fails"))
 
     assert(sim.peek("a").getValue == 3)
+  }
+
+  it should "be able to execute the twocount2 example with symbolic inputs" in {
+    val src = FileUtils.getTextResource("/btormc/twocount2.btor2")
+    val sim = SymbolicSim.loadBtor(src, "twocount2")
+
+    // increment b to three
+    sim.poke("turn", 1)
+    sim.step()
+    sim.step()
+    sim.step()
+    assert(sim.peek("b").getValue == 3)
+
+    // increment a to three
+    sim.poke("turn", 0)
+    assert(sim.peek("a").getValue == 0)
+    sim.step()
+    assert(sim.peek("a").getValue == 1)
+    sim.step()
+    assert(sim.peek("a").getValue == 2)
+    // in the next step, either b or a will increment
+    sim.pokeDontCare("turn")
+
+    val e = intercept[RuntimeException] {
+      sim.step()
+    }
+    assert(e.toString.contains("cycle 6"))
+    assert(e.toString.contains("may fail"))
+
+    assert(sim.peek("a").isSymbolic)
+    assert(sim.peek("b").isSymbolic)
+
+    assert(sim.peek("a").toString == "Value(ite(turn@5, 2'b10, 2'b11))")
+    assert(sim.peek("b").toString == "Value(ite(turn@5, 2'b0, 2'b11))")
   }
 }

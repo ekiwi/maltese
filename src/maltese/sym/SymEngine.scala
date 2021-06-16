@@ -67,6 +67,13 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     results(step)
   }
 
+  // resets value of signal and any signals derived from it
+  def invalidate(name: String, step: Int): Unit = {
+    assert(validCellName(name), f"Unknown cell $name")
+    val cell = Cell(name, step)
+    invalidate(cell)
+  }
+
   def set(name: String, step: Int, value: BVValueSummary): Unit = {
     assert(validCellName(name), f"Unknown cell $name")
     val cell = Cell(name, step)

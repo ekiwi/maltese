@@ -40,6 +40,11 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
     new Value(engine.signalAt(signal, cycleCount))
   }
 
+  def pokeDontCare(signal: String): Unit = {
+    engine.invalidate(signal, cycleCount)
+    inputAssignments.remove(signal)
+  }
+
   def poke(signal: String, value: BigInt): Unit = {
     val vs = engine.set(signal, cycleCount, value)
     if(isInput(signal)) { inputAssignments(signal) = vs }
@@ -56,9 +61,13 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   }
 
   def assert(v: Value, msg: => String = ""): Unit = {
-    val isSat = Value.getValueSummary(v).isSat
-    if(isSat) {
-      throw new RuntimeException(s"Assertion failed! $msg")
+    val vs = Value.getValueSummary(v)
+    if(vs.isSat) {
+      if(vs.isConcrete) {
+        throw new RuntimeException(s"Assertion always fails! $msg")
+      } else {
+        throw new RuntimeException(s"Assertion may fail! $msg")
+      }
     }
   }
 
