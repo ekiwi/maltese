@@ -22,3 +22,6 @@
 /*.hprof
 /*.txt
 /*.svg
+
+# unfortunate firrtl artifacts
+/*.btor2
