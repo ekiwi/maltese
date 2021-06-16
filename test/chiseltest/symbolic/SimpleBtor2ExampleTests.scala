@@ -7,8 +7,8 @@ package chiseltest.symbolic
 import firrtl.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
-class SymbolicSimTest extends AnyFlatSpec {
-  behavior of "SymbolicSim"
+class SimpleBtor2ExampleTests extends AnyFlatSpec {
+  behavior of "SymbolicSim with simple btor2 examples"
 
   it should "be able to execute the simple count2 example" in {
     val src = FileUtils.getTextResource("/btormc/count2.btor2")

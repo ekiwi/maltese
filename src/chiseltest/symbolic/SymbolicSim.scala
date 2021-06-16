@@ -4,9 +4,12 @@
 
 package chiseltest.symbolic
 
+import firrtl.AnnotationSeq
+import firrtl.options.Dependency
+import firrtl.stage.{FirrtlSourceAnnotation, FirrtlStage, RunFirrtlTransformAnnotation}
 import maltese.mc
 import maltese.mc._
-import maltese.passes.{DeadCodeElimination, Inline, Pass, PassManager, Simplify}
+import maltese.passes.{CreateInitAndNextSignals, DeadCodeElimination, Inline, Pass, PassManager, Simplify}
 import maltese.sym._
 
 import java.io.File
@@ -118,9 +121,25 @@ object SymbolicSim {
     new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
   }
 
+  private lazy val firrtlCompiler = new FirrtlStage
+  private def firrtlCompilerSource(src: String) = Seq(FirrtlSourceAnnotation(src))
+
+  def loadFirrtl(src: String): SymbolicSim = loadFirrtl(src, List(), false)
+  def loadFirrtl(src: String, annos: AnnotationSeq): SymbolicSim = loadFirrtl(src, annos, false)
+  def loadFirrtl(src: String, annos: AnnotationSeq, ignoreAsserts: Boolean): SymbolicSim = {
+    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ annos)
+    val sys = firrtl.backends.experimental.smt.ExpressionConverter.toMaltese(r).getOrElse {
+      throw new RuntimeException(s"Failed to extract transition system from: $r")
+    }
+    val simplified = simplifySystem(sys)
+    if(verbose) { println(simplified.serialize) }
+    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
+  }
+
   private val verbose = false
   private def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = verbose)
   private val passes: Iterable[Pass] = Seq(
+    CreateInitAndNextSignals,
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
