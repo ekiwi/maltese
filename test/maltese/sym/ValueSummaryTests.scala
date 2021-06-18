@@ -22,7 +22,7 @@ class ValueSummaryTests extends AnyFlatSpec {
     // if we add the two value summaries, we should get no more than two entries,
     // since the other entries should evaluate to false
     val sum = BVValueSummary.binary(four_or_five, one_or_one, add_sym)
-    assert(sum.entryCount == 2)
+    assert(sum.size == 2)
   }
 
   it should "coalescing of duplicate values" in {
@@ -32,7 +32,7 @@ class ValueSummaryTests extends AnyFlatSpec {
 
     // the result of the addition is always five, no matter what the branch condition is
     val sum = BVValueSummary.binary(four_or_five, one_or_zero, add_sym)
-    assert(sum.entryCount == 1)
+    assert(sum.size == 1)
     assert(sum.isConcrete)
     assert(sum.value.get == 5)
   }
