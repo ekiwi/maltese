@@ -85,7 +85,6 @@ object BVValueSummary {
     def width = value.width
   }
 
-
   private def importIntoGuard(v: BVValueSummary): BVValueSummary =
     if(v.width != 1 || !v.ctx.opts.ImportBooleanExpressionsIntoGuard) {
       v
@@ -121,12 +120,79 @@ object BVValueSummary {
   }
 }
 
+class BigIntArray private(default: BigInt, entries: Map[BigInt, BigInt], indexWidth: Int) {
+  val maxEntries = BigInt(1) << indexWidth
+  def +(that: (BigInt, BigInt)): BigIntArray = {
+    requireInRange(that._1)
+    new BigIntArray(default, entries + that, indexWidth)
+  }
+  def apply(index: BigInt): BigInt ={
+    requireInRange(index)
+    entries.getOrElse(index, default)
+  }
+  private def requireInRange(index: BigInt): Unit = {
+    require(index >= 0, s"Index cannot be negative: $index")
+    require(index < maxEntries, s"Index may not exceed ${maxEntries - 1}: $index")
+  }
+}
+
+object BigIntArray {
+  def apply(default: BigInt, indexWidth: Int): BigIntArray = new BigIntArray(default, Map(), indexWidth)
+}
+
+private object ArrayValueSummary {
+  case class ArrayEntry(guard: BDD, value: ArrayExpr) {
+    def indexWidth = value.indexWidth
+    def dataWidth = value.dataWidth
+  }
+
+  def toConcrete(e: ArrayExpr): Option[BigIntArray] = e match {
+    case ArrayStore(array, BVLiteral(index, _), BVLiteral(value, _)) =>
+      toConcrete(array).map(_ + (index -> value))
+    case ArrayConstant(BVLiteral(value, _), indexWidth) =>
+      Some(BigIntArray(value, indexWidth))
+    case foo: ArrayFunctionCall =>
+      throw new RuntimeException(s"Array function calls are unsupported!\n$foo")
+    case ite: ArrayIte =>
+      throw new RuntimeException(s"Array ite s are unsupported! Should be part of the value summary instead.\n$ite")
+    case _ => None
+  }
+
+  def toSMT(v: ArrayValueSummary): ArrayExpr = {
+    if(v.entries.size == 1) {
+      v.entries.head.value
+    } else {
+      v.entries.drop(1).foldLeft(v.entries.head.value) { (a: ArrayExpr, b: ArrayEntry) =>
+        val cond: BVExpr = v.ctx.bddToSmt(b.guard)
+        val (c, t, f) = cond match {
+          case BVNot(n_cond) => (n_cond, a, b.value)
+          case _ => (cond, b.value, a)
+        }
+        ArrayIte(c, t, f)
+      }
+    }
+  }
+}
+
+class ArrayValueSummary private(private val ctx: SymbolicContext,
+  private val entries: List[ArrayValueSummary.ArrayEntry]) extends ValueSummary {
+  require(entries.nonEmpty)
+  val indexWidth = entries.head.indexWidth
+  require(entries.forall(_.indexWidth == indexWidth))
+  val dataWidth = entries.head.dataWidth
+  require(entries.forall(_.dataWidth == dataWidth))
+  override def size = entries.size
+  override def isConcrete = (size == 1) && ArrayValueSummary.toConcrete(entries.head.value).isDefined
+  def value: Option[BigIntArray] = if(size == 1) { ArrayValueSummary.toConcrete(entries.head.value) } else { None }
+  def symbolic: ArrayExpr = ArrayValueSummary.toSMT(this)
+}
+
 
 class BVValueSummary private(private val ctx: SymbolicContext,
                              private val entries: List[BVValueSummary.BVEntry]) extends ValueSummary {
-  assert(entries.nonEmpty)
+  require(entries.nonEmpty)
   val width = entries.head.width
-  assert(entries.forall(_.width == width))
+  require(entries.forall(_.width == width))
   def isTrue: Boolean = entries.size == 1 && entries.head.value == True()
   def isFalse: Boolean = entries.size == 1 && entries.head.value == False()
   override def toString = if(size < 100) {
@@ -140,5 +206,4 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   def symbolic: BVExpr = BVValueSummary.toSMT(this)
   def isValid: Boolean = ctx.isValid(this)
   def isSat: Boolean = ctx.isSat(this)
-  def entryCount: Int = entries.size
 }
