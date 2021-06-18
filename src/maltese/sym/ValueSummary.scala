@@ -14,14 +14,22 @@ sealed trait ValueSummary {
 }
 
 object BVValueSummary {
-  def apply(expr: BVExpr)(implicit ctx: SymbolicContext): BVValueSummary
-  = new BVValueSummary(ctx, List(BVEntry(ctx.tru, expr)))
+  def apply(expr: BVExpr)(implicit ctx: SymbolicContext): BVValueSummary =
+    new BVValueSummary(ctx, List(BVEntry(ctx.tru, expr)))
+  def apply(value: BigInt, width: Int)(implicit ctx: SymbolicContext): BVValueSummary =
+    apply(BVLiteral(value, width))
+  def apply(value: Boolean)(implicit ctx: SymbolicContext): BVValueSummary =
+    apply(if(value) 1 else 0, 1)
 
   def binary(a: BVValueSummary, b: BVValueSummary, op: (BVExpr, BVExpr) => BVExpr): BVValueSummary = {
     assert(a.ctx.eq(b.ctx))
 
     val pairs = for(e1 <- a.entries; e2 <- b.entries) yield { (e1.guard.and(e2.guard), e1.value, e2.value) }
-    val newEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
+    // we filter out pairs for which the guard is false
+    val feasiblePairs = pairs.filterNot(_._1.isZero)
+    // TODO: should be coalesce only for ITE operations or also for boolean ops?
+    val rawEntries = feasiblePairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
+    val newEntries = if(a.ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
     importIntoGuard(new BVValueSummary(a.ctx, newEntries))
   }
 
@@ -132,4 +140,5 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   def symbolic: BVExpr = BVValueSummary.toSMT(this)
   def isValid: Boolean = ctx.isValid(this)
   def isSat: Boolean = ctx.isSat(this)
+  def entryCount: Int = entries.size
 }
