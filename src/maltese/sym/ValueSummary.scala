@@ -134,6 +134,13 @@ class BigIntArray private(default: BigInt, entries: Map[BigInt, BigInt], indexWi
     require(index >= 0, s"Index cannot be negative: $index")
     require(index < maxEntries, s"Index may not exceed ${maxEntries - 1}: $index")
   }
+
+  def toIndexedSeq: IndexedSeq[BigInt] = {
+    require(indexWidth <= 16, s"It is a bad idea to turn an array with $maxEntries entries into an IndexedSeq!")
+    IndexedSeq.tabulate(maxEntries.toInt)(apply(_))
+  }
+
+  def toMap: (BigInt, Map[BigInt, BigInt]) = (default, entries)
 }
 
 object BigIntArray {
@@ -141,6 +148,9 @@ object BigIntArray {
 }
 
 private object ArrayValueSummary {
+  def apply(expr: ArrayExpr)(implicit ctx: SymbolicContext): ArrayValueSummary =
+    new ArrayValueSummary(ctx, List(ArrayEntry(ctx.tru, expr)))
+
   case class ArrayEntry(guard: BDD, value: ArrayExpr) {
     def indexWidth = value.indexWidth
     def dataWidth = value.dataWidth
