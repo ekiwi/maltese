@@ -48,4 +48,30 @@ class ArrayValueSummaryTests extends AnyFlatSpec {
     assert(value.toMap._1 == 123)
     assert(value.toMap._2 == Map(3 -> 100))
   }
+
+  it should "recognize that a constant array with a constant store is concrete (using the ValueSummary.store function)" in {
+    val a = ArrayConstant(BVLiteral(123, 8), 4)
+    val vs = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
+
+    assert(vs.isConcrete)
+    assert(vs.value.get.toIndexedSeq == IndexedSeq(123, 123, 123, 100, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123))
+  }
+
+  it should "return a constant for a store and load (on constant base array)" ignore {
+    val a = ArrayConstant(BVLiteral(123, 8), 4)
+    val stored = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
+    val load = BVValueSummary.read(stored, BVValueSummary(3, 4))
+
+    assert(load.isConcrete)
+    assert(load.value.get == 100)
+  }
+
+  it should "return a constant for a store and load (on symbolic base array)" ignore {
+    val a = ArraySymbol("a", indexWidth = 4, dataWidth = 8)
+    val stored = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
+    val load = BVValueSummary.read(stored, BVValueSummary(3, 4))
+
+    assert(load.isConcrete)
+    assert(load.value.get == 100)
+  }
 }

@@ -24,13 +24,29 @@ object BVValueSummary {
   def binary(a: BVValueSummary, b: BVValueSummary, op: (BVExpr, BVExpr) => BVExpr): BVValueSummary = {
     assert(a.ctx.eq(b.ctx))
 
-    val pairs = for(e1 <- a.entries; e2 <- b.entries) yield { (e1.guard.and(e2.guard), e1.value, e2.value) }
-    // we filter out pairs for which the guard is false
-    val feasiblePairs = pairs.filterNot(_._1.isZero)
+    val pairs = makePairs(a, b)
     // TODO: should be coalesce only for ITE operations or also for boolean ops?
-    val rawEntries = feasiblePairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
+    val rawEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(op(a, b))) }
     val newEntries = if(a.ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
     importIntoGuard(new BVValueSummary(a.ctx, newEntries))
+  }
+
+  def makePairs(a: BVValueSummary, b: BVValueSummary): List[(BDD, BVExpr, BVExpr)] = {
+    // TODO: we could probably make this faster by using BDDs as keys to a hash map
+    //       this could accelerate the case where both a and b have matching guards
+    //       which seems likely since case splits across the circuit should be similar
+    a.entries.flatMap(makePairs(_, b.entries))
+  }
+
+  private def makePairs(a: BVEntry, b: List[BVEntry]): List[(BDD, BVExpr, BVExpr)] = {
+    b.flatMap { case BVEntry(guard, value) =>
+      // if the guards are exactly the same, we know that there is only a single pair, since all guards are
+      // mutually exclusive
+      if(guard.equals(a.guard)) { return List((a.guard, a.value, value)) } else {
+        val conj = a.guard.and(guard)
+        if(conj.isZero) { None } else { Some((conj, a.value, value)) }
+      }
+    }
   }
 
   def unary(a: BVValueSummary, op: BVExpr => BVExpr): BVValueSummary = {
@@ -66,6 +82,14 @@ object BVValueSummary {
     }
   }
 
+  def read(array: ArrayValueSummary, index: BVValueSummary): BVValueSummary = {
+    val pairs = ArrayValueSummary.makePairs(array, index.entries.map(e => e.guard -> e.value))
+    // TODO: should be coalesce only for ITE operations or also for boolean ops?
+    val rawEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(ArrayRead(a, b))) }
+    val newEntries = if(index.ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
+    importIntoGuard(new BVValueSummary(index.ctx, newEntries))
+  }
+
   private def coalesce(entries: List[BVEntry]) : List[BVEntry] = {
     val (duplicate, others) = entries.groupBy(_.value).partition(_._2.size > 1)
     if(duplicate.isEmpty) {
@@ -81,7 +105,7 @@ object BVValueSummary {
   // TODO: we could get better performance by only simplifying one new expression
   private def simplify(expr: BVExpr): BVExpr = SMTSimplifier.simplify(expr).asInstanceOf[BVExpr]
 
-  private case class BVEntry(guard: BDD, value: BVExpr) {
+  case class BVEntry(guard: BDD, value: BVExpr) {
     def width = value.width
   }
 
@@ -100,7 +124,7 @@ object BVValueSummary {
     newEntries
   }
 
-  private def toSMT(v: BVValueSummary): BVExpr = {
+  def toSMT(v: BVValueSummary): BVExpr = {
     if(v.entries.size == 1) {
       v.entries.head.value
     } else if(v.width == 1) { // for 1-bit values, we just build a boolean formula
@@ -155,6 +179,54 @@ private object ArrayValueSummary {
     def indexWidth = value.indexWidth
     def dataWidth = value.dataWidth
   }
+
+  def store(array: ArrayValueSummary, index: BVValueSummary, data: BVValueSummary): ArrayValueSummary = {
+    val ctx = array.ctx
+    // generate all feasible triplets of array, index and data
+    val pairs = BVValueSummary.makePairs(index, data)
+    val triplets = makeTriplets(array, pairs)
+    val rawEntries = triplets.map { case (guard, a, b, c) => ArrayEntry(guard, simplify(ArrayStore(a, b, c))) }
+    val newEntries = if(ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
+    new ArrayValueSummary(ctx, newEntries)
+  }
+
+  private def makeTriplets(array: ArrayValueSummary, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, ArrayExpr, BVExpr, BVExpr)] =
+    array.entries.flatMap(makeTriplets(_, pairs))
+
+  private def makeTriplets(array: ArrayEntry, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, ArrayExpr, BVExpr, BVExpr)] = {
+    pairs.flatMap { case (guard, index, data) =>
+      if(guard.equals(array.guard)) { return List((guard, array.value, index, data)) }
+      val conj = array.guard.and(guard)
+      if(conj.isZero) { None } else { Some((conj, array.value, index, data)) }
+    }
+  }
+
+  // TODO: with better types, we should be able to have a single function for combining entries
+  def makePairs(array: ArrayValueSummary, other: List[(BDD, BVExpr)]): List[(BDD, ArrayExpr, BVExpr)] =
+    array.entries.flatMap(makePairs(_, other))
+
+  private def makePairs(array: ArrayEntry, other: List[(BDD, BVExpr)]): List[(BDD, ArrayExpr, BVExpr)] = {
+    other.flatMap { case (guard, data) =>
+      if(guard.equals(array.guard)) { return List((guard, array.value, data)) }
+      val conj = array.guard.and(guard)
+      if(conj.isZero) { None } else { Some((conj, array.value, data)) }
+    }
+  }
+
+  private def coalesce(entries: List[ArrayEntry]) : List[ArrayEntry] = {
+    val (duplicate, others) = entries.groupBy(_.value).partition(_._2.size > 1)
+    if(duplicate.isEmpty) {
+      entries
+    } else {
+      (duplicate.map { case (_, entries) =>
+        val combinedGuard = entries.map(_.guard).reduce((a,b) => a.or(b))
+        entries.head.copy(guard = combinedGuard)
+      } ++ others.map(_._2.head)).toList
+    }
+  }
+
+  // TODO: we could get better performance by only simplifying one new expression
+  private def simplify(expr: ArrayExpr): ArrayExpr = SMTSimplifier.simplify(expr).asInstanceOf[ArrayExpr]
 
   def toConcrete(e: ArrayExpr): Option[BigIntArray] = e match {
     case ArrayStore(array, BVLiteral(index, _), BVLiteral(value, _)) =>
