@@ -1,4 +1,4 @@
-// Copyright 2021 The Regents of the University of California
+// Copyright 2019-2021 The Regents of the University of California
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
@@ -7,7 +7,7 @@ package maltese.sym
 import maltese.smt._
 import org.scalatest.flatspec.AnyFlatSpec
 
-class ValueSummaryTests extends AnyFlatSpec {
+class BVValueSummaryTests extends AnyFlatSpec {
   implicit val ctx = new SymbolicContext(Options.Default)
 
   private def bv4(value: Int) = BVValueSummary(value, 4)
