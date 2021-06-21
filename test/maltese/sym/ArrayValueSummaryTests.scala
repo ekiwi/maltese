@@ -1,3 +1,7 @@
+// Copyright 2019-2021 The Regents of the University of California
+// released under BSD 3-Clause License
+// author: Kevin Laeufer <laeufer@cs.berkeley.edu>
+
 package maltese.sym
 
 import maltese.smt._
@@ -30,8 +34,7 @@ class ArrayValueSummaryTests extends AnyFlatSpec {
 
   it should "recognize that a constant array with a constant store is concrete" in {
     val a = ArrayConstant(BVLiteral(123, 8), 4)
-    val a_store = ArrayStore(a, index = BVLiteral(3, 4), data = BVLiteral(100, 8))
-    val vs = ArrayValueSummary(a_store)
+    val vs = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
 
     assert(vs.isConcrete)
 
@@ -49,15 +52,7 @@ class ArrayValueSummaryTests extends AnyFlatSpec {
     assert(value.toMap._2 == Map(3 -> 100))
   }
 
-  it should "recognize that a constant array with a constant store is concrete (using the ValueSummary.store function)" in {
-    val a = ArrayConstant(BVLiteral(123, 8), 4)
-    val vs = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
-
-    assert(vs.isConcrete)
-    assert(vs.value.get.toIndexedSeq == IndexedSeq(123, 123, 123, 100, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123))
-  }
-
-  it should "return a constant for a store and load (on constant base array)" ignore {
+  it should "return a constant for a store and load (on constant base array)" in {
     val a = ArrayConstant(BVLiteral(123, 8), 4)
     val stored = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
     val load = BVValueSummary.read(stored, BVValueSummary(3, 4))
@@ -66,7 +61,7 @@ class ArrayValueSummaryTests extends AnyFlatSpec {
     assert(load.value.get == 100)
   }
 
-  it should "return a constant for a store and load (on symbolic base array)" ignore {
+  it should "return a constant for a store and load (on symbolic base array)" in {
     val a = ArraySymbol("a", indexWidth = 4, dataWidth = 8)
     val stored = ArrayValueSummary.store(ArrayValueSummary(a), BVValueSummary(3, 4), BVValueSummary(100, 8))
     val load = BVValueSummary.read(stored, BVValueSummary(3, 4))

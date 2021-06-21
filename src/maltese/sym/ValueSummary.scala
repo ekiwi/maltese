@@ -85,7 +85,7 @@ object BVValueSummary {
   def read(array: ArrayValueSummary, index: BVValueSummary): BVValueSummary = {
     val pairs = ArrayValueSummary.makePairs(array, index.entries.map(e => e.guard -> e.value))
     // TODO: should be coalesce only for ITE operations or also for boolean ops?
-    val rawEntries = pairs.map { case (guard, a, b) => BVEntry(guard, simplify(ArrayRead(a, b))) }
+    val rawEntries = pairs.map { case (guard, a, b) => BVEntry(guard, a.load(b, None)) }
     val newEntries = if(index.ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
     importIntoGuard(new BVValueSummary(index.ctx, newEntries))
   }
@@ -144,38 +144,17 @@ object BVValueSummary {
   }
 }
 
-class BigIntArray private(default: BigInt, entries: Map[BigInt, BigInt], indexWidth: Int) {
-  val maxEntries = BigInt(1) << indexWidth
-  def +(that: (BigInt, BigInt)): BigIntArray = {
-    requireInRange(that._1)
-    new BigIntArray(default, entries + that, indexWidth)
-  }
-  def apply(index: BigInt): BigInt ={
-    requireInRange(index)
-    entries.getOrElse(index, default)
-  }
-  private def requireInRange(index: BigInt): Unit = {
-    require(index >= 0, s"Index cannot be negative: $index")
-    require(index < maxEntries, s"Index may not exceed ${maxEntries - 1}: $index")
-  }
-
-  def toIndexedSeq: IndexedSeq[BigInt] = {
-    require(indexWidth <= 16, s"It is a bad idea to turn an array with $maxEntries entries into an IndexedSeq!")
-    IndexedSeq.tabulate(maxEntries.toInt)(apply(_))
-  }
-
-  def toMap: (BigInt, Map[BigInt, BigInt]) = (default, entries)
-}
-
-object BigIntArray {
-  def apply(default: BigInt, indexWidth: Int): BigIntArray = new BigIntArray(default, Map(), indexWidth)
-}
-
 private object ArrayValueSummary {
-  def apply(expr: ArrayExpr)(implicit ctx: SymbolicContext): ArrayValueSummary =
-    new ArrayValueSummary(ctx, List(ArrayEntry(ctx.tru, expr)))
+  def apply(expr: ArrayExpr)(implicit ctx: SymbolicContext): ArrayValueSummary = {
+    val array = expr match {
+      case const: ArrayConstant => new BaseArrayConst(const)
+      case sym: ArraySymbol => new BaseArraySym(sym)
+      case other => throw new RuntimeException(s"Cannot create an array value from: $other")
+    }
+    new ArrayValueSummary(ctx, List(ArrayEntry(ctx.tru, array)))
+  }
 
-  case class ArrayEntry(guard: BDD, value: ArrayExpr) {
+  case class ArrayEntry(guard: BDD, value: MalteseArray) {
     def indexWidth = value.indexWidth
     def dataWidth = value.dataWidth
   }
@@ -185,15 +164,15 @@ private object ArrayValueSummary {
     // generate all feasible triplets of array, index and data
     val pairs = BVValueSummary.makePairs(index, data)
     val triplets = makeTriplets(array, pairs)
-    val rawEntries = triplets.map { case (guard, a, b, c) => ArrayEntry(guard, simplify(ArrayStore(a, b, c))) }
+    val rawEntries = triplets.map { case (guard, a, b, c) => ArrayEntry(guard, a.store(b, c)) }
     val newEntries = if(ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
     new ArrayValueSummary(ctx, newEntries)
   }
 
-  private def makeTriplets(array: ArrayValueSummary, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, ArrayExpr, BVExpr, BVExpr)] =
+  private def makeTriplets(array: ArrayValueSummary, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, MalteseArray, BVExpr, BVExpr)] =
     array.entries.flatMap(makeTriplets(_, pairs))
 
-  private def makeTriplets(array: ArrayEntry, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, ArrayExpr, BVExpr, BVExpr)] = {
+  private def makeTriplets(array: ArrayEntry, pairs: List[(BDD, BVExpr, BVExpr)]): List[(BDD, MalteseArray, BVExpr, BVExpr)] = {
     pairs.flatMap { case (guard, index, data) =>
       if(guard.equals(array.guard)) { return List((guard, array.value, index, data)) }
       val conj = array.guard.and(guard)
@@ -202,10 +181,10 @@ private object ArrayValueSummary {
   }
 
   // TODO: with better types, we should be able to have a single function for combining entries
-  def makePairs(array: ArrayValueSummary, other: List[(BDD, BVExpr)]): List[(BDD, ArrayExpr, BVExpr)] =
+  def makePairs(array: ArrayValueSummary, other: List[(BDD, BVExpr)]): List[(BDD, MalteseArray, BVExpr)] =
     array.entries.flatMap(makePairs(_, other))
 
-  private def makePairs(array: ArrayEntry, other: List[(BDD, BVExpr)]): List[(BDD, ArrayExpr, BVExpr)] = {
+  private def makePairs(array: ArrayEntry, other: List[(BDD, BVExpr)]): List[(BDD, MalteseArray, BVExpr)] = {
     other.flatMap { case (guard, data) =>
       if(guard.equals(array.guard)) { return List((guard, array.value, data)) }
       val conj = array.guard.and(guard)
@@ -225,8 +204,6 @@ private object ArrayValueSummary {
     }
   }
 
-  // TODO: we could get better performance by only simplifying one new expression
-  private def simplify(expr: ArrayExpr): ArrayExpr = SMTSimplifier.simplify(expr).asInstanceOf[ArrayExpr]
 
   def toConcrete(e: ArrayExpr): Option[BigIntArray] = e match {
     case ArrayStore(array, BVLiteral(index, _), BVLiteral(value, _)) =>
@@ -242,13 +219,13 @@ private object ArrayValueSummary {
 
   def toSMT(v: ArrayValueSummary): ArrayExpr = {
     if(v.entries.size == 1) {
-      v.entries.head.value
+      v.entries.head.value.symbolic
     } else {
-      v.entries.drop(1).foldLeft(v.entries.head.value) { (a: ArrayExpr, b: ArrayEntry) =>
+      v.entries.drop(1).foldLeft(v.entries.head.value.symbolic) { (a: ArrayExpr, b: ArrayEntry) =>
         val cond: BVExpr = v.ctx.bddToSmt(b.guard)
         val (c, t, f) = cond match {
-          case BVNot(n_cond) => (n_cond, a, b.value)
-          case _ => (cond, b.value, a)
+          case BVNot(n_cond) => (n_cond, a, b.value.symbolic)
+          case _ => (cond, b.value.symbolic, a)
         }
         ArrayIte(c, t, f)
       }
@@ -263,9 +240,9 @@ class ArrayValueSummary private(private val ctx: SymbolicContext,
   require(entries.forall(_.indexWidth == indexWidth))
   val dataWidth = entries.head.dataWidth
   require(entries.forall(_.dataWidth == dataWidth))
-  override def size = entries.size
-  override def isConcrete = (size == 1) && ArrayValueSummary.toConcrete(entries.head.value).isDefined
-  def value: Option[BigIntArray] = if(size == 1) { ArrayValueSummary.toConcrete(entries.head.value) } else { None }
+  override def size: Int = entries.size
+  override def isConcrete = (size == 1) && entries.head.value.toConcrete.isDefined
+  def value: Option[BigIntArray] = if(size == 1) {  entries.head.value.toConcrete } else { None }
   def symbolic: ArrayExpr = ArrayValueSummary.toSMT(this)
 }
 
@@ -280,7 +257,7 @@ class BVValueSummary private(private val ctx: SymbolicContext,
   override def toString = if(size < 100) {
     SMTSimplifier.simplify(BVValueSummary.toSMT(this)).toString
   } else { s"ValueSummary w/ $size entries" }
-  override def size = entries.size
+  override def size: Int = entries.size
   override def isConcrete = (size == 1) && entries.head.value.isInstanceOf[BVLiteral]
   def value: Option[BigInt] = if(isConcrete) {
     Some(entries.head.value.asInstanceOf[BVLiteral].value)
