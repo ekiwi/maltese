@@ -11,12 +11,12 @@
 /test_run_dir/
 
 # Chisel compiler
-*.v
-*.fir
-*.json
+/*.v
+/*.fir
+/*.json
 
 # treadle
-*.vcd
+/*.vcd
 
 # hprof profiling
 /*.hprof
