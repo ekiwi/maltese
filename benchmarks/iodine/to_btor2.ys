@@ -1,0 +1,12 @@
+read_verilog -formal fpu2_divider.v
+prep -top divider
+memory_nordff
+async2sync
+opt_clean
+setundef -anyseq
+opt -keepdc -fast
+check
+hierarchy -simcheck
+dffunmap
+stat
+write_btor divider.btor2

@@ -1,0 +1,4 @@
+read_verilog fpu2_divider.v
+hierarchy -top divider
+proc
+write_firrtl divider.fir
