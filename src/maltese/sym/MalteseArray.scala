@@ -84,10 +84,11 @@ class SparseConcreteArray(base: MalteseArray,
     index match {
       case BVLiteral(value, _) =>
         val allEntries = entries + (value -> data)
-        // val isDense = (indexWidth <= 16) && allEntries.size == (1 << indexWidth)
-        new SparseConcreteArray(base, entries + (value -> data))
+        new SparseConcreteArray(base, allEntries)
       case symbolic =>
-        new SymbolicArray(this, List(symbolic -> data))
+        // copy all entries over to the new symbolic array to enable better optimizations
+        val entryList: List[(BVExpr,BVExpr)] = entries.toList.map{ case (i,v) => (BVLiteral(i, indexWidth) : BVExpr) -> v }
+        new SymbolicArray(base, entryList :+ (symbolic -> data))
     }
   }
 
@@ -152,8 +153,12 @@ class SymbolicArray(base: MalteseArray, entries: List[(BVExpr, BVExpr)]) extends
 
 object SymbolicArray {
   private def mayAlias(a: BVExpr, b: BVExpr): Boolean = !definitelyNoAlias(a, b)
-  private def definitelyAlias(a: BVExpr, b: BVExpr): Boolean = isTrue(BVEqual(a, b))
-  private def definitelyNoAlias(a: BVExpr, b: BVExpr): Boolean = isTrue(BVNot(BVEqual(a, b)))
+  // if a and b are exactly the same formula, than they do alias!
+  private def definitelyAlias(a: BVExpr, b: BVExpr): Boolean = a == b
+  private def definitelyNoAlias(a: BVExpr, b: BVExpr): Boolean = (a, b) match {
+    case (e1: BVLiteral, e2: BVLiteral) => e1.value != e2.value
+    case _ => false
+  }
   private def mayAliasSolver(isUnSat: BVExpr => Boolean, a: BVExpr, b: BVExpr): Boolean = !isUnSat(BVEqual(a, b))
   private def definitelyAliasSolver(isUnSat: BVExpr => Boolean, a: BVExpr, b: BVExpr): Boolean = isUnSat(BVNot(BVEqual(a, b)))
   private def isTrue(e: BVExpr): Boolean = SMTSimplifier.simplify(e) match {

@@ -67,7 +67,7 @@ class MalteseArrayTests extends AnyFlatSpec {
     assert(!mem.hasConcreteIndices)
   }
 
-  "ConcreteAddrMemory" should "convert to a SymbolicAddrMemory without loosing any content" ignore {
+  "ConcreteAddrMemory" should "convert to a SymbolicAddrMemory without loosing any content" in {
     val (a, b) = (BVSymbol("a", 4), BVSymbol("b", 4))
     val addrSym = BVSymbol("addr", 3)
 
