@@ -109,6 +109,8 @@ object BVValueSummary {
     def width = value.width
   }
 
+  private [maltese] def getEntries(vs: BVValueSummary): List[BVEntry] = vs.entries
+
   private def importIntoGuard(v: BVValueSummary): BVValueSummary =
     if(v.width != 1 || !v.ctx.opts.ImportBooleanExpressionsIntoGuard) {
       v
@@ -154,6 +156,13 @@ private object ArrayValueSummary {
     new ArrayValueSummary(ctx, List(ArrayEntry(ctx.tru, array)))
   }
 
+  def apply(value: BVValueSummary, indexWidth: Int)(implicit ctx: SymbolicContext): ArrayValueSummary = {
+    val entries = BVValueSummary.getEntries(value).map { e =>
+      ArrayEntry(e.guard, new BaseArrayConst(ArrayConstant(e.value, indexWidth)))
+    }
+    new ArrayValueSummary(ctx, entries)
+  }
+
   case class ArrayEntry(guard: BDD, value: MalteseArray) {
     def indexWidth = value.indexWidth
     def dataWidth = value.dataWidth
@@ -189,6 +198,34 @@ private object ArrayValueSummary {
       if(guard.equals(array.guard)) { return List((guard, array.value, data)) }
       val conj = array.guard.and(guard)
       if(conj.isZero) { None } else { Some((conj, array.value, data)) }
+    }
+  }
+
+  def ite(cond: BVValueSummary, tru: => ArrayValueSummary, fals: => ArrayValueSummary): ArrayValueSummary = {
+    // if the condition is concrete, we only need to evaluate one side of the mux
+    if(cond.isTrue) { tru
+    } else if(cond.isFalse) { fals
+    } else {
+      val ctx = tru.ctx
+      assert(ctx.eq(tru.ctx) && ctx.eq(fals.ctx))
+      // TODO: integrate SMT solver for better filtering
+      val isFalse: BDD => Boolean =
+        if(ctx.opts.CheckITEConditionWithSmtSolver) { b => b.isZero || ctx.isUnSat(b) } else { b => b.isZero }
+
+      // find all conditions under which the true/false branch will be taken
+      val condEntries = BVValueSummary.getEntries(cond)
+      val truCond  = condEntries.map(e => ctx.smtToBdd(e.value).and(e.guard)).filterNot(isFalse)
+      val falsCond = condEntries.map(e => ctx.smtToBdd(e.value).not().and(e.guard)).filterNot(isFalse)
+
+      def combine(conds: List[BDD], entries: List[ArrayEntry]): List[ArrayEntry] =
+        conds.flatMap(c => entries.flatMap{ e =>
+          val combinedGuard = c.and(e.guard)
+          if(isFalse(combinedGuard)) { None } else { Some(e.copy(guard = combinedGuard)) }
+        })
+
+      val rawEntries = combine(truCond, tru.entries) ++ combine(falsCond, fals.entries)
+      val newEntries = if(ctx.opts.DoNotCoalesce) { rawEntries } else { coalesce(rawEntries) }
+      new ArrayValueSummary(ctx, newEntries)
     }
   }
 

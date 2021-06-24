@@ -4,7 +4,7 @@
 
 package maltese.sym
 
-import maltese.mc.TransitionSystem
+import maltese.mc._
 import maltese.smt._
 
 import scala.collection.mutable
@@ -22,14 +22,14 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val getWidth = (sys.inputs.map(i => i.name -> i.width) ++
     sys.states.map(_.sym).collect{ case BVSymbol(name, width) => name -> width } ++
     sys.signals.collect{ case maltese.mc.Signal(name, e: BVExpr, _) => name -> e.width }).toMap
-  private val results = mutable.ArrayBuffer[mutable.HashMap[String, BVValueSummary]]()
+  private val results = mutable.ArrayBuffer[mutable.HashMap[String, ValueSummary]]()
   /** edges from result to arguments */
   private val uses = mutable.HashMap[Cell, List[Cell]]()
   private implicit val ctx = new SymbolicContext(opts)
 
-  def signalAt(name: String, step: Int): BVValueSummary = signalAt(Cell(name, step))
+  def signalAt(name: String, step: Int): ValueSummary = signalAt(Cell(name, step))
 
-  private def signalAt(cell: Cell): BVValueSummary = {
+  private def signalAt(cell: Cell): ValueSummary = {
     val frame = getFrame(cell.step)
     val r = frame.getOrElseUpdate(cell.signal, computeCell(cell))
     if(r.size > 1000) {
@@ -60,7 +60,7 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   }
 
   /** allocates the frame if necessary */
-  private def getFrame(step: Int): mutable.HashMap[String, BVValueSummary] = {
+  private def getFrame(step: Int): mutable.HashMap[String, ValueSummary] = {
     if(results.size < step + 1) {
       (0 to (step - results.size)).foreach(_ => results.append(mutable.HashMap()))
     }
@@ -74,7 +74,7 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     invalidate(cell)
   }
 
-  def set(name: String, step: Int, value: BVValueSummary): Unit = {
+  def set(name: String, step: Int, value: ValueSummary): Unit = {
     assert(validCellName(name), f"Unknown cell $name")
     val cell = Cell(name, step)
     invalidate(cell)
@@ -82,17 +82,17 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     frame(name) = value
   }
 
-  def set(name: String, step: Int, value: BigInt): BVValueSummary = {
+  def set(name: String, step: Int, value: BigInt): ValueSummary = {
     assert(validCellName(name), f"Unknown cell $name")
     val vs = BVValueSummary(BVLiteral(value, getWidth(name)))
     set(name, step, vs)
     vs
   }
 
-  private def computeCell(cell: Cell): BVValueSummary = {
+  private def computeCell(cell: Cell): ValueSummary = {
     val name = cell.signal
     if(signals.contains(name)) {
-      eval(signals(name).e.asInstanceOf[BVExpr], cell)
+      eval(signals(name).e, cell)
     } else if(inputs.contains(name)) {
       inputAt(cell)
     } else if(states.contains(name)) {
@@ -101,28 +101,31 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
       throw new RuntimeException(s"Unknown signal ${cell.id}")
     }
   }
-  private def eval(expr: BVExpr, cell: Cell): BVValueSummary = expr match {
-    case BVSymbol(name, _) =>
-      val prevCell = cell.copy(signal = name)
+  private def eval(expr: SMTExpr, cell: Cell): ValueSummary = expr match {
+    case sym : SMTSymbol =>
+      val prevCell = cell.copy(signal = sym.name)
       // track cell dependencies
       uses(prevCell) = cell +: uses.getOrElse(prevCell, List())
       signalAt(prevCell)
     case l : BVLiteral => BVValueSummary(l)
-    case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, cell), u.reapply)
-    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, cell), eval(u.b, cell), u.reapply)
-    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, cell), eval(tru, cell), eval(fals, cell))
+    case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, cell).asInstanceOf[BVValueSummary], u.reapply)
+    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, cell).asInstanceOf[BVValueSummary], eval(u.b, cell).asInstanceOf[BVValueSummary], u.reapply)
+    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, cell).asInstanceOf[BVValueSummary], eval(tru, cell).asInstanceOf[BVValueSummary], eval(fals, cell).asInstanceOf[BVValueSummary])
+    case ArrayIte(cond, tru, fals) => ArrayValueSummary.ite(eval(cond, cell).asInstanceOf[BVValueSummary], eval(tru, cell).asInstanceOf[ArrayValueSummary], eval(fals, cell).asInstanceOf[ArrayValueSummary])
+    case ArrayRead(array, index) => BVValueSummary.read(eval(array, cell).asInstanceOf[ArrayValueSummary], eval(index, cell).asInstanceOf[BVValueSummary])
+    case ArrayStore(array, index, data) => ArrayValueSummary.store(eval(array, cell).asInstanceOf[ArrayValueSummary], eval(index, cell).asInstanceOf[BVValueSummary], eval(data, cell).asInstanceOf[BVValueSummary])
+    case ArrayConstant(e, indexWidth) => ArrayValueSummary(eval(e, cell).asInstanceOf[BVValueSummary], indexWidth)
     case other => throw new RuntimeException(s"Unexpected expression: $other")
   }
 
 
-  private def stateAt(cell: Cell): BVValueSummary = {
+  private def stateAt(cell: Cell): ValueSummary = {
     val state = states(cell.signal)
     if(cell.step == 0) {
       if(state.init.isDefined && !noInit) {
         signalAt(state.name + ".init", 0)
       } else {
-        val sym = symbols.getOrElseUpdate(state.name + "@0", SMTSymbol.fromExpr(state.name + "@0", state.sym).asInstanceOf[BVSymbol])
-        BVValueSummary(sym)
+        stateInit(state)
       }
     } else {
       assert(cell.step > 0)
@@ -130,15 +133,23 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     }
   }
 
+  private def stateInit(state: State): ValueSummary = {
+    val name = state.name + "@0"
+    symbols.getOrElseUpdate(name, SMTSymbol.fromExpr(name, state.sym)) match {
+      case b: BVSymbol => BVValueSummary(b)
+      case a: ArraySymbol => ArrayValueSummary(a)
+    }
+  }
+
   private def inputAt(cell: Cell): BVValueSummary = {
-    val sym = symbols.getOrElseUpdate(cell.id, BVSymbol(cell.id, inputs(cell.signal).width))
+    val sym = symbols.getOrElseUpdate(cell.id, BVSymbol(cell.id, inputs(cell.signal).width)).asInstanceOf[BVSymbol]
     BVValueSummary(sym)
   }
-  private def symbols = mutable.HashMap[String, BVSymbol]()
+  private def symbols = mutable.HashMap[String, SMTSymbol]()
 
-  def makeSymbol(name: String, width: Int): BVValueSummary = {
+  def makeBVSymbol(name: String, width: Int): BVValueSummary = {
     symbols.get(name) match {
-      case Some(sym) =>
+      case Some(sym: BVSymbol) =>
         assert(sym.width == width)
         BVValueSummary(sym)
       case None =>

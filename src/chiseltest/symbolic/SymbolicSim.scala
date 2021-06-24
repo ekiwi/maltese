@@ -47,7 +47,7 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   }
 
   def peek(signal: String): Value = {
-    new Value(engine.signalAt(signal, cycleCount))
+    new Value(engine.signalAt(signal, cycleCount).asInstanceOf[BVValueSummary])
   }
 
   def pokeDontCare(signal: String): Unit = {
@@ -56,7 +56,7 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   }
 
   def poke(signal: String, value: BigInt): Unit = {
-    val vs = engine.set(signal, cycleCount, value)
+    val vs = engine.set(signal, cycleCount, value).asInstanceOf[BVValueSummary]
     if(isInput(signal)) { inputAssignments(signal) = vs }
   }
 
@@ -67,7 +67,7 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
   }
 
   def makeSymbol(name: String, width: Int): Value = {
-    new Value(engine.makeSymbol(name, width))
+    new Value(engine.makeBVSymbol(name, width))
   }
 
   def assert(v: Value, msg: => String = ""): Unit = {

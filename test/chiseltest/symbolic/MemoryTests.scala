@@ -41,9 +41,29 @@ class MemoryTests extends AnyFlatSpec {
 
     val sim = SymbolicSim.loadFirrtl(input)
 
-    sim.poke("writeEn", 0)
-    val data = sim.peek("dataOut")
-    println(s"data: $data")
+    // by default we are reading from a symbolic address
+    def data = sim.peek("dataOut")
+    assert(data.toString == "Value(m@0[addr@0])")
+    assert(data.isSymbolic)
+
+    // now let's read from address 0
+    sim.poke("addr", 0)
+    assert(data.toString == "Value(m@0[5'b0])")
+    assert(data.isSymbolic)
+
+    // write a concrete value to address zero
+    sim.poke("addr", 0)
+    sim.poke("writeEn", 1)
+    sim.poke("dataIn", 123)
+    sim.step()
+
+    // now reading from address 0 should return a concrete value
+    sim.poke("addr", 0)
+    val d = data
+    assert(data.isConcrete, f"Data is not concrete: ${data}")
+    assert(data.getValue == 123)
+
+
     sim.step()
 
   }
