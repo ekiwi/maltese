@@ -39,6 +39,13 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
     doCheckAsserts()
   }
 
+  // convenience method
+  def reset(): Unit = {
+    poke("reset", 1)
+    step()
+    poke("reset", 0)
+  }
+
   def peek(signal: String): Value = {
     new Value(engine.signalAt(signal, cycleCount))
   }
