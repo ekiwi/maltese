@@ -109,11 +109,24 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
       signalAt(prevCell)
     case l : BVLiteral => BVValueSummary(l)
     case u : BVUnaryExpr => BVValueSummary.unary(eval(u.e, cell).asInstanceOf[BVValueSummary], u.reapply)
-    case u : BVBinaryExpr => BVValueSummary.binary(eval(u.a, cell).asInstanceOf[BVValueSummary], eval(u.b, cell).asInstanceOf[BVValueSummary], u.reapply)
-    case BVIte(cond, tru, fals) => BVValueSummary.ite(eval(cond, cell).asInstanceOf[BVValueSummary], eval(tru, cell).asInstanceOf[BVValueSummary], eval(fals, cell).asInstanceOf[BVValueSummary])
-    case ArrayIte(cond, tru, fals) => ArrayValueSummary.ite(eval(cond, cell).asInstanceOf[BVValueSummary], eval(tru, cell).asInstanceOf[ArrayValueSummary], eval(fals, cell).asInstanceOf[ArrayValueSummary])
-    case ArrayRead(array, index) => BVValueSummary.read(eval(array, cell).asInstanceOf[ArrayValueSummary], eval(index, cell).asInstanceOf[BVValueSummary])
-    case ArrayStore(array, index, data) => ArrayValueSummary.store(eval(array, cell).asInstanceOf[ArrayValueSummary], eval(index, cell).asInstanceOf[BVValueSummary], eval(data, cell).asInstanceOf[BVValueSummary])
+    case u : BVBinaryExpr => BVValueSummary.binary(
+      eval(u.a, cell).asInstanceOf[BVValueSummary],
+      eval(u.b, cell).asInstanceOf[BVValueSummary], u.reapply)
+    case BVIte(cond, tru, fals) => BVValueSummary.ite(
+      eval(cond, cell).asInstanceOf[BVValueSummary],
+      eval(tru, cell).asInstanceOf[BVValueSummary],
+      eval(fals, cell).asInstanceOf[BVValueSummary])
+    case ArrayIte(cond, tru, fals) => ArrayValueSummary.ite(
+      eval(cond, cell).asInstanceOf[BVValueSummary],
+      eval(tru, cell).asInstanceOf[ArrayValueSummary],
+      eval(fals, cell).asInstanceOf[ArrayValueSummary])
+    case ArrayRead(array, index) => BVValueSummary.read(
+      eval(array, cell).asInstanceOf[ArrayValueSummary],
+      eval(index, cell).asInstanceOf[BVValueSummary])
+    case ArrayStore(array, index, data) => ArrayValueSummary.store(
+      eval(array, cell).asInstanceOf[ArrayValueSummary],
+      eval(index, cell).asInstanceOf[BVValueSummary],
+      eval(data, cell).asInstanceOf[BVValueSummary])
     case ArrayConstant(e, indexWidth) => ArrayValueSummary(eval(e, cell).asInstanceOf[BVValueSummary], indexWidth)
     case other => throw new RuntimeException(s"Unexpected expression: $other")
   }
