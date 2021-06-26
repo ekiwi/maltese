@@ -4,42 +4,47 @@
 
 package chiseltest.symbolic
 
+import firrtl.annotations.{CircuitTarget, MemoryArrayInitAnnotation, MemoryScalarInitAnnotation}
 import org.scalatest.flatspec.AnyFlatSpec
+
+import scala.util.Random
 
 class MemoryTests extends AnyFlatSpec {
   behavior of "SymbolicSim w/ Memories"
 
-  it should "memory primitives should run this circuit" in {
-    val input =
-      """circuit Test :
-        |  module Test :
-        |    input clock : Clock
-        |    input addr : UInt<5>
-        |    input dataIn : UInt<7>
-        |    output dataOut : UInt<7>
-        |    input writeEn : UInt<1>
-        |
-        |    mem m :
-        |      data-type => UInt<7>
-        |      depth => 32
-        |      read-latency => 0
-        |      write-latency => 1
-        |      reader => r
-        |      writer => w
-        |    m.r.clk <= clock
-        |    m.r.en <= UInt<1>(1)
-        |    m.r.addr <= addr
-        |    dataOut <= m.r.data
-        |
-        |    m.w.clk <= clock
-        |    m.w.en <= UInt<1>(1)
-        |    m.w.mask <= writeEn
-        |    m.w.addr <= addr
-        |    m.w.data <= dataIn
-        |
+  private val simpleMem =
+    """circuit Test :
+      |  module Test :
+      |    input clock : Clock
+      |    input addr : UInt<5>
+      |    input dataIn : UInt<7>
+      |    output dataOut : UInt<7>
+      |    input writeEn : UInt<1>
+      |
+      |    mem m :
+      |      data-type => UInt<7>
+      |      depth => 32
+      |      read-latency => 0
+      |      write-latency => 1
+      |      reader => r
+      |      writer => w
+      |    m.r.clk <= clock
+      |    m.r.en <= UInt<1>(1)
+      |    m.r.addr <= addr
+      |    dataOut <= m.r.data
+      |
+      |    m.w.clk <= clock
+      |    m.w.en <= UInt<1>(1)
+      |    m.w.mask <= writeEn
+      |    m.w.addr <= addr
+      |    m.w.data <= dataIn
+      |
       """.stripMargin
+  private val memTarget = CircuitTarget("Test").module("Test").ref("m")
 
-    val sim = SymbolicSim.loadFirrtl(input)
+
+  it should "memory primitives should run this circuit" in {
+    val sim = SymbolicSim.loadFirrtl(simpleMem)
 
     // by default we are reading from a symbolic address
     def data = sim.peek("dataOut")
@@ -59,12 +64,50 @@ class MemoryTests extends AnyFlatSpec {
 
     // now reading from address 0 should return a concrete value
     sim.poke("addr", 0)
-    val d = data
     assert(data.isConcrete, f"Data is not concrete: ${data}")
     assert(data.getValue == 123)
+  }
 
+  it should "support initializing a memory with a scalar value" in {
+    val anno = MemoryScalarInitAnnotation(memTarget, 55)
+    val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
+    def data = sim.peek("dataOut")
 
+    // with a concrete address, we should get a concrete value
+    sim.poke("addr", 0)
+    assert(data.isConcrete)
+    assert(data.getValue == 55)
+
+    // with a symbolic address it should be the same, since every address maps to the same value
+    sim.pokeDontCare("addr")
+    assert(data.isConcrete)
+    assert(data.getValue == 55)
+  }
+
+  it should "support initializing a memory with an array of values" in {
+    val rand = new Random(0)
+    val values = Seq.tabulate(32)(_ => BigInt(7, rand))
+    val anno = MemoryArrayInitAnnotation(memTarget, values)
+    val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
+    def data = sim.peek("dataOut")
+
+    // with a concrete address, we should get a concrete value
+    values.zipWithIndex.foreach { case (value, addr) =>
+      sim.poke("addr", addr)
+      assert(data.isConcrete)
+      assert(data.getValue == value)
+    }
+
+    // with a symbolic address, we get a symbolic value
+    sim.pokeDontCare("addr")
+    assert(data.isSymbolic)
+
+    // we can overwrite a value
+    sim.poke("writeEn", 1)
+    sim.poke("addr", 17)
+    sim.poke("dataIn", 123)
     sim.step()
-
+    assert(data.isConcrete)
+    assert(data.getValue == 123)
   }
 }
