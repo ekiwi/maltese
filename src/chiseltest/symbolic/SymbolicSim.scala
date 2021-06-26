@@ -6,6 +6,7 @@ package chiseltest.symbolic
 
 import firrtl.AnnotationSeq
 import firrtl.options.Dependency
+import firrtl.passes.InlineInstances
 import firrtl.stage.{FirrtlSourceAnnotation, FirrtlStage, RunFirrtlTransformAnnotation}
 import maltese.mc
 import maltese.mc._
@@ -16,7 +17,7 @@ import java.io.File
 import scala.collection.mutable
 
 
-class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
+class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAsserts: Boolean) {
   // we do not support assumptions at the moment
   private val assumptions =  sys.signals.filter(_.lbl == IsConstraint)
   require(assumptions.isEmpty, "Assumptions are currently not supported!")
@@ -46,24 +47,30 @@ class SymbolicSim(sys: TransitionSystem, ignoreAsserts: Boolean) {
     poke("reset", 0)
   }
 
+  private def resolveSignal(signal: String): String = renames.getOrElse(signal, signal)
+
   def peek(signal: String): Value = {
-    new Value(engine.signalAt(signal, cycleCount).asInstanceOf[BVValueSummary])
+    val name = resolveSignal(signal)
+    new Value(engine.signalAt(name, cycleCount).asInstanceOf[BVValueSummary])
   }
 
   def pokeDontCare(signal: String): Unit = {
-    engine.invalidate(signal, cycleCount)
-    inputAssignments.remove(signal)
+    val name = resolveSignal(signal)
+    engine.invalidate(name, cycleCount)
+    inputAssignments.remove(name)
   }
 
   def poke(signal: String, value: BigInt): Unit = {
-    val vs = engine.set(signal, cycleCount, value).asInstanceOf[BVValueSummary]
-    if(isInput(signal)) { inputAssignments(signal) = vs }
+    val name = resolveSignal(signal)
+    val vs = engine.set(name, cycleCount, value).asInstanceOf[BVValueSummary]
+    if(isInput(name)) { inputAssignments(name) = vs }
   }
 
   def poke(signal: String, value: Value): Unit = {
+    val name = resolveSignal(signal)
     val vs = Value.getValueSummary(value)
-    engine.set(signal, cycleCount, vs)
-    if(isInput(signal)) { inputAssignments(signal) = vs }
+    engine.set(name, cycleCount, vs)
+    if(isInput(name)) { inputAssignments(name) = vs }
   }
 
   def makeSymbol(name: String, width: Int): Value = {
@@ -117,7 +124,7 @@ object SymbolicSim {
     // load transition system from file
     val sys = mc.Btor2.load(new File(filename))
     val simplified = simplifySystem(sys)
-    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
+    new SymbolicSim(simplified, renames = Map(), ignoreAsserts = ignoreAsserts)
   }
 
   def loadBtor(src: String, name: String): SymbolicSim = loadBtor(src, name, false)
@@ -125,22 +132,24 @@ object SymbolicSim {
     val sys = mc.Btor2.read(src = src, defaultName = name)
     val simplified = simplifySystem(sys)
     if(verbose) { println(simplified.serialize) }
-    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
+    new SymbolicSim(simplified, renames = Map(), ignoreAsserts = ignoreAsserts)
   }
 
   private lazy val firrtlCompiler = new FirrtlStage
   private def firrtlCompilerSource(src: String) = Seq(FirrtlSourceAnnotation(src))
+  private val flattenPass = Seq(RunFirrtlTransformAnnotation(Dependency(FlattenPass)), RunFirrtlTransformAnnotation(Dependency[InlineInstances]))
 
   def loadFirrtl(src: String): SymbolicSim = loadFirrtl(src, List(), false)
   def loadFirrtl(src: String, annos: AnnotationSeq): SymbolicSim = loadFirrtl(src, annos, false)
   def loadFirrtl(src: String, annos: AnnotationSeq, ignoreAsserts: Boolean): SymbolicSim = {
-    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ annos)
+    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ flattenPass ++ annos)
     val sys = firrtl.backends.experimental.smt.ExpressionConverter.toMaltese(r).getOrElse {
       throw new RuntimeException(s"Failed to extract transition system from: $r")
     }
+    val renames = FlattenPass.getRenames(r)
     val simplified = simplifySystem(sys)
     if(verbose) { println(simplified.serialize) }
-    new SymbolicSim(simplified, ignoreAsserts = ignoreAsserts)
+    new SymbolicSim(simplified, renames = renames, ignoreAsserts = ignoreAsserts)
   }
 
   private val verbose = false
