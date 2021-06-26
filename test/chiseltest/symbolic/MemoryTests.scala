@@ -4,7 +4,7 @@
 
 package chiseltest.symbolic
 
-import firrtl.annotations.{CircuitTarget, MemoryArrayInitAnnotation, MemoryScalarInitAnnotation}
+import firrtl.annotations.{CircuitTarget, MemoryArrayInitAnnotation, MemoryFileInlineAnnotation, MemoryLoadFileType, MemoryScalarInitAnnotation}
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.util.Random
@@ -84,11 +84,7 @@ class MemoryTests extends AnyFlatSpec {
     assert(data.getValue == 55)
   }
 
-  it should "support initializing a memory with an array of values" in {
-    val rand = new Random(0)
-    val values = Seq.tabulate(32)(_ => BigInt(7, rand))
-    val anno = MemoryArrayInitAnnotation(memTarget, values)
-    val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
+  private def testArrayInit(values: Seq[BigInt], sim: SymbolicSim): Unit = {
     def data = sim.peek("dataOut")
 
     // with a concrete address, we should get a concrete value
@@ -109,5 +105,25 @@ class MemoryTests extends AnyFlatSpec {
     sim.step()
     assert(data.isConcrete)
     assert(data.getValue == 123)
+  }
+
+  it should "support initializing a memory with an array of values" in {
+    val rand = new Random(0)
+    val values = Seq.tabulate(32)(_ => BigInt(7, rand))
+    val anno = MemoryArrayInitAnnotation(memTarget, values)
+    val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
+    testArrayInit(values, sim)
+  }
+
+  // TODO: add support for MemoryFile*Annotation to the formal backend!
+  it should "support initializing memories through a file" ignore {
+    val rand = new Random(0)
+    val values = Seq.tabulate(32)(_ => BigInt(7, rand))
+    // we write the values to a temporary file in hex format
+    val hexValues = values.map(_.toString(16)).mkString("\n") + "\n"
+    val hexFile = os.temp(hexValues)
+    val anno = MemoryFileInlineAnnotation(memTarget, hexFile.toString(), MemoryLoadFileType.Hex)
+    val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
+    testArrayInit(values, sim)
   }
 }
