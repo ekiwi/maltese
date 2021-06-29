@@ -281,6 +281,9 @@ class ArrayValueSummary private(private val ctx: SymbolicContext,
   override def isConcrete = (size == 1) && entries.head.value.toConcrete.isDefined
   def value: Option[BigIntArray] = if(size == 1) {  entries.head.value.toConcrete } else { None }
   def symbolic: ArrayExpr = ArrayValueSummary.toSMT(this)
+  override def toString = if(size < 100) {
+    SMTSimplifier.simplify(ArrayValueSummary.toSMT(this)).toString
+  } else { s"ValueSummary w/ $size entries" }
 }
 
 

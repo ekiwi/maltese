@@ -54,7 +54,7 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
 
   def peek(signal: String): Value = {
     val name = resolveSignal(signal)
-    new Value(engine.signalAt(name, cycleCount).asInstanceOf[BVValueSummary])
+    new Value(engine.signalAt(name, cycleCount))
   }
 
   def peekMemory(signal: String, index: BigInt): Value = {
@@ -85,7 +85,7 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     val name = resolveSignal(signal)
     val vs = Value.getValueSummary(value)
     engine.set(name, cycleCount, vs)
-    if(isInput(name)) { inputAssignments(name) = vs }
+    if(isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
   }
 
   def makeSymbol(name: String, width: Int): Value = {
@@ -93,7 +93,7 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   }
 
   def assert(v: Value, msg: => String = ""): Unit = {
-    val vs = Value.getValueSummary(v)
+    val vs = Value.getValueSummary(v).asInstanceOf[BVValueSummary]
     if(vs.isSat) {
       if(vs.isConcrete) {
         throw new RuntimeException(s"Assertion always fails! $msg")
@@ -111,23 +111,31 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
 }
 
 
-class Value(private val e: BVValueSummary) {
+class Value(private val e: ValueSummary) {
   def isSymbolic: Boolean = e.isSymbolic
   def isConcrete: Boolean = e.isConcrete
-  def getValue: BigInt = e.value match {
-    case Some(v) => v
-    case None => throw new RuntimeException(
-      s"Value is symbolic: ${e.symbolic}"
-    )
+  def getValue: BigInt = e match {
+    case b: BVValueSummary =>
+      b.value match {
+        case Some(v) => v
+        case None => throw new RuntimeException(s"Value is symbolic: ${b.symbolic}")
+      }
+    case _ =>
+      throw new RuntimeException("Value is an array!")
   }
-  override def toString = e.value match {
-    case Some(value) => "Value(" + value + ")"
-    case None => "Value(" + e.toString + ")"
+
+  override def toString = e match {
+    case a: ArrayValueSummary => "Value(" + a.toString + ")"
+    case b: BVValueSummary =>
+      b.value match {
+        case Some(value) => "Value(" + value + ")"
+        case None => "Value(" + b.toString + ")"
+      }
   }
 }
 
 private object Value {
-  def getValueSummary(v: Value): BVValueSummary = v.e
+  def getValueSummary(v: Value): ValueSummary = v.e
 }
 
 
