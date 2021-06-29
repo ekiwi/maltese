@@ -98,6 +98,14 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     vs
   }
 
+  def set(name: String, step: Int, value: BVExpr): BVValueSummary = {
+    assert(validCellName(name), f"Unknown cell $name")
+    assert(value.width == getWidth(name))
+    val vs = BVValueSummary(value)
+    set(name, step, vs)
+    vs
+  }
+
   def set(name: String, step: Int, index: BigInt, value: BigInt): Unit = {
     assert(validCellName(name), f"Unknown cell $name")
     val indexVs = BVValueSummary(BVLiteral(index, getIndexWidth(name)))

@@ -30,6 +30,9 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   private val isInput = sys.inputs.map(_.name).toSet
   private val inputAssignments = mutable.HashMap[String, BVValueSummary]()
 
+  // make the names of all inputs public
+  val inputs: Seq[String] = sys.inputs.map(_.name)
+
   private val isMemory = sys.states.filter(_.sym.isInstanceOf[smt.ArraySymbol]).map(_.name).toSet
 
   private val engine = SymEngine(sys, noInit = false)
@@ -70,6 +73,12 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   }
 
   def poke(signal: String, value: BigInt): Unit = {
+    val name = resolveSignal(signal)
+    val vs = engine.set(name, cycleCount, value)
+    if(isInput(name)) { inputAssignments(name) = vs }
+  }
+
+  def poke(signal: String, value: smt.BVExpr): Unit = {
     val name = resolveSignal(signal)
     val vs = engine.set(name, cycleCount, value)
     if(isInput(name)) { inputAssignments(name) = vs }
