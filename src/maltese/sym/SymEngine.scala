@@ -22,12 +22,21 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
   private val getWidth = (sys.inputs.map(i => i.name -> i.width) ++
     sys.states.map(_.sym).collect{ case BVSymbol(name, width) => name -> width } ++
     sys.signals.collect{ case maltese.mc.Signal(name, e: BVExpr, _) => name -> e.width }).toMap
+  private val mems = sys.states.map(_.sym).collect{ case ArraySymbol(name, indexWidth, dataWidth) => name -> (indexWidth, dataWidth) }
+  private val getIndexWidth = mems.map(m => m._1 -> m._2._1).toMap
+  private val getDataWidth = mems.map(m => m._1 -> m._2._2).toMap
   private val results = mutable.ArrayBuffer[mutable.HashMap[String, ValueSummary]]()
   /** edges from result to arguments */
   private val uses = mutable.HashMap[Cell, List[Cell]]()
   private implicit val ctx = new SymbolicContext(opts)
 
   def signalAt(name: String, step: Int): ValueSummary = signalAt(Cell(name, step))
+  def signalAt(name: String, index: BigInt, step: Int): BVValueSummary = {
+    assert(validCellName(name), f"Unknown cell $name")
+    val indexVs = BVValueSummary(BVLiteral(index, getIndexWidth(name)))
+    val array = signalAt(Cell(name, step)).asInstanceOf[ArrayValueSummary]
+    BVValueSummary.read(array, indexVs)
+  }
 
   private def signalAt(cell: Cell): ValueSummary = {
     val frame = getFrame(cell.step)
@@ -82,11 +91,22 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     frame(name) = value
   }
 
-  def set(name: String, step: Int, value: BigInt): ValueSummary = {
+  def set(name: String, step: Int, value: BigInt): BVValueSummary = {
     assert(validCellName(name), f"Unknown cell $name")
     val vs = BVValueSummary(BVLiteral(value, getWidth(name)))
     set(name, step, vs)
     vs
+  }
+
+  def set(name: String, step: Int, index: BigInt, value: BigInt): Unit = {
+    assert(validCellName(name), f"Unknown cell $name")
+    val indexVs = BVValueSummary(BVLiteral(index, getIndexWidth(name)))
+    val dataVs = BVValueSummary(BVLiteral(value, getDataWidth(name)))
+    val cell = Cell(name, step)
+    val old = signalAt(cell).asInstanceOf[ArrayValueSummary]
+    invalidate(cell)
+    val frame = getFrame(cell.step)
+    frame(name) = ArrayValueSummary.store(old, indexVs, dataVs)
   }
 
   private def computeCell(cell: Cell): ValueSummary = {

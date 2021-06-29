@@ -12,6 +12,7 @@ import maltese.mc
 import maltese.mc._
 import maltese.passes.{CreateInitAndNextSignals, DeadCodeElimination, Inline, Pass, PassManager, Simplify}
 import maltese.sym._
+import maltese.smt
 
 import java.io.File
 import scala.collection.mutable
@@ -28,6 +29,8 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   // we need to cache the input assignment to retain the in the next cycle
   private val isInput = sys.inputs.map(_.name).toSet
   private val inputAssignments = mutable.HashMap[String, BVValueSummary]()
+
+  private val isMemory = sys.states.filter(_.sym.isInstanceOf[smt.ArraySymbol]).map(_.name).toSet
 
   private val engine = SymEngine(sys, noInit = false)
   private var cycleCount = 0
@@ -54,6 +57,12 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     new Value(engine.signalAt(name, cycleCount).asInstanceOf[BVValueSummary])
   }
 
+  def peekMemory(signal: String, index: BigInt): Value = {
+    val name = resolveSignal(signal)
+    require(isMemory(name), s"Could not find memory $name!")
+    new Value(engine.signalAt(name, index, cycleCount))
+  }
+
   def pokeDontCare(signal: String): Unit = {
     val name = resolveSignal(signal)
     engine.invalidate(name, cycleCount)
@@ -62,8 +71,14 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
 
   def poke(signal: String, value: BigInt): Unit = {
     val name = resolveSignal(signal)
-    val vs = engine.set(name, cycleCount, value).asInstanceOf[BVValueSummary]
+    val vs = engine.set(name, cycleCount, value)
     if(isInput(name)) { inputAssignments(name) = vs }
+  }
+
+  def pokeMemory(signal: String, index: BigInt, value: BigInt): Unit = {
+    val name = resolveSignal(signal)
+    require(isMemory(name), s"Could not find memory $name!")
+    engine.set(name, cycleCount, index, value)
   }
 
   def poke(signal: String, value: Value): Unit = {

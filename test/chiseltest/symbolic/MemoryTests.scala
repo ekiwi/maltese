@@ -125,4 +125,33 @@ class MemoryTests extends AnyFlatSpec {
     val sim = SymbolicSim.loadFirrtl(simpleMem, Seq(anno))
     testArrayInit(values, sim)
   }
+
+  it should "support poking a memory location" in {
+    val sim = SymbolicSim.loadFirrtl(simpleMem)
+
+    // by default we are reading from the initial memory symbol
+    sim.poke("addr", 0)
+    def data = sim.peek("dataOut")
+    assert(data.toString == "Value(m@0[5'b0])")
+    assert(data.isSymbolic)
+
+    // after poking a concrete value, we should get that back
+    sim.pokeMemory("m", 0, 123)
+    assert(data.isConcrete)
+    assert(data.getValue == 123)
+  }
+
+  it should "support peeking a memory location" in {
+    val sim = SymbolicSim.loadFirrtl(simpleMem)
+
+    // by default we are reading from the initial memory symbol
+    def data = sim.peekMemory("m", 0)
+    assert(data.toString == "Value(m@0[5'b0])")
+    assert(data.isSymbolic)
+
+    // after poking a concrete value, we should get that back
+    sim.pokeMemory("m", 0, 123)
+    assert(data.isConcrete)
+    assert(data.getValue == 123)
+  }
 }
