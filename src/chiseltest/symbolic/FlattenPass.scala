@@ -61,9 +61,9 @@ object FlattenPass extends Transform with DependencyAPIMigration {
   private def onStmt(s: ir.Statement, m: IsModule, prefix: String): Seq[Annotation] = s match {
     case r: ir.DefRegister =>
       List(ReferenceAnno(m.ref(r.name), prefix + r.name))
-    case m: ir.DefMemory =>
-      // TODO
-      List()
+    case mem: ir.DefMemory =>
+      // TODO: include ports!
+      List(ReferenceAnno(m.ref(mem.name), prefix + mem.name))
     case ir.Block(stmts) => stmts.flatMap(onStmt(_, m, prefix))
     case _ => List()
   }
