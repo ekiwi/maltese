@@ -138,6 +138,11 @@ class Value(private val e: ValueSummary) {
       throw new RuntimeException("Value is an array!")
   }
 
+  def getSMT: smt.SMTExpr = e match {
+    case b: BVValueSummary => b.symbolic
+    case a: ArrayValueSummary => a.symbolic
+  }
+
   override def toString = e match {
     case a: ArrayValueSummary => "Value(" + a.toString + ")"
     case b: BVValueSummary =>

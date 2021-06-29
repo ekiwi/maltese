@@ -13,22 +13,22 @@ class Sodor1StageTests extends AnyFlatSpec {
   it should "execute symbolically" in {
     val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor1Stage.fir")
 
-    println(sim.peek("core.d.regfile").toString)
-    println(sim.peek("core.d.pc_reg").toString)
     // set all inputs to a concrete value
     sim.inputs.foreach(sim.poke(_, 0))
     sim.reset()
-    println(sim.peek("core.d.regfile").toString)
-    println(sim.peek("core.d.pc_reg").toString)
-    // sim.poke("io_imem_req_ready", 1)
+
+    // provide an instruction
     sim.poke("io_imem_resp_valid", 1)
     sim.poke("io_imem_resp_bits_data", RiscV.symbolicAdd)
+
+    // initialize the register file
+    sim.poke("core.d.regfile", RiscV.BaseRegs)
+
+    // there is only a single stage
     sim.step()
-    println(sim.peek("core.d.regfile").toString)
-    println(sim.peek("core.d.pc_reg").toString)
-    sim.step()
-    println(sim.peek("core.d.regfile").toString)
-    println(sim.peek("core.d.pc_reg").toString)
+
+    val regsNext = sim.peek("core.d.regfile")
+    RiscV.verifyAdd(regsNext.getSMT.asInstanceOf[smt.ArrayExpr])
   }
 
 
