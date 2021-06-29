@@ -183,7 +183,8 @@ object SymbolicSim {
       throw new RuntimeException(s"Failed to extract transition system from: $r")
     }
     val renames = FlattenPass.getRenames(r)
-    val simplified = simplifySystem(sys)
+    val sysWithNextInitNodes = CreateInitAndNextSignals.run(sys)
+    val simplified = sysWithNextInitNodes // simplifySystem(sys)
     if(verbose) { println(simplified.serialize) }
     new SymbolicSim(simplified, renames = renames, ignoreAsserts = ignoreAsserts)
   }
@@ -194,9 +195,11 @@ object SymbolicSim {
   }
 
   private val verbose = false
-  private def simplifySystem(sys: TransitionSystem): TransitionSystem = PassManager(passes).run(sys, trace = verbose)
+  private def simplifySystem(sys: TransitionSystem): TransitionSystem = {
+    val r = PassManager(passes).run(sys, trace = verbose)
+    r
+  }
   private val passes: Iterable[Pass] = Seq(
-    CreateInitAndNextSignals,
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
@@ -206,6 +209,5 @@ object SymbolicSim {
     new DeadCodeElimination(removeUnusedInputs = true),
 
     Simplify,
-    // PrintSystem,
   )
 }
