@@ -7,7 +7,7 @@ package chiseltest.symbolic
 import firrtl.AnnotationSeq
 import firrtl.options.Dependency
 import firrtl.passes.InlineInstances
-import firrtl.stage.{FirrtlSourceAnnotation, FirrtlStage, RunFirrtlTransformAnnotation}
+import firrtl.stage.{FirrtlFileAnnotation, FirrtlSourceAnnotation, FirrtlStage, RunFirrtlTransformAnnotation}
 import maltese.mc
 import maltese.mc._
 import maltese.passes.{CreateInitAndNextSignals, DeadCodeElimination, Inline, Pass, PassManager, Simplify}
@@ -158,7 +158,10 @@ object SymbolicSim {
   def loadFirrtl(src: String): SymbolicSim = loadFirrtl(src, List(), false)
   def loadFirrtl(src: String, annos: AnnotationSeq): SymbolicSim = loadFirrtl(src, annos, false)
   def loadFirrtl(src: String, annos: AnnotationSeq, ignoreAsserts: Boolean): SymbolicSim = {
-    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ flattenPass ++ convertFileInit ++ annos)
+    loadFirrtl(firrtlCompilerSource(src) ++: annos, ignoreAsserts)
+  }
+  def loadFirrtl(annos: AnnotationSeq, ignoreAsserts: Boolean): SymbolicSim = {
+    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), flattenPass ++ convertFileInit ++ annos)
     val sys = firrtl.backends.experimental.smt.ExpressionConverter.toMaltese(r).getOrElse {
       throw new RuntimeException(s"Failed to extract transition system from: $r")
     }
@@ -166,6 +169,11 @@ object SymbolicSim {
     val simplified = simplifySystem(sys)
     if(verbose) { println(simplified.serialize) }
     new SymbolicSim(simplified, renames = renames, ignoreAsserts = ignoreAsserts)
+  }
+  def loadFirrtlFile(filename: String): SymbolicSim = loadFirrtlFile(filename, false)
+  def loadFirrtlFile(filename: String, ignoreAsserts: Boolean): SymbolicSim = {
+    val in = FirrtlFileAnnotation(filename)
+    loadFirrtl(Seq(in), ignoreAsserts)
   }
 
   private val verbose = false
