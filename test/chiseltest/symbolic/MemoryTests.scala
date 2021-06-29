@@ -115,8 +115,7 @@ class MemoryTests extends AnyFlatSpec {
     testArrayInit(values, sim)
   }
 
-  // TODO: add support for MemoryFile*Annotation to the formal backend!
-  it should "support initializing memories through a file" ignore {
+  it should "support initializing memories through a file" in {
     val rand = new Random(0)
     val values = Seq.tabulate(32)(_ => BigInt(7, rand))
     // we write the values to a temporary file in hex format

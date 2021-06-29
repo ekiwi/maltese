@@ -138,11 +138,12 @@ object SymbolicSim {
   private lazy val firrtlCompiler = new FirrtlStage
   private def firrtlCompilerSource(src: String) = Seq(FirrtlSourceAnnotation(src))
   private val flattenPass = Seq(RunFirrtlTransformAnnotation(Dependency(FlattenPass)), RunFirrtlTransformAnnotation(Dependency[InlineInstances]))
+  private val convertFileInit = Seq(RunFirrtlTransformAnnotation(Dependency(MemoryFileInitPass)))
 
   def loadFirrtl(src: String): SymbolicSim = loadFirrtl(src, List(), false)
   def loadFirrtl(src: String, annos: AnnotationSeq): SymbolicSim = loadFirrtl(src, annos, false)
   def loadFirrtl(src: String, annos: AnnotationSeq, ignoreAsserts: Boolean): SymbolicSim = {
-    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ flattenPass ++ annos)
+    val r = firrtlCompiler.execute(Array("-E", "experimental-btor2"), firrtlCompilerSource(src) ++ flattenPass ++ convertFileInit ++ annos)
     val sys = firrtl.backends.experimental.smt.ExpressionConverter.toMaltese(r).getOrElse {
       throw new RuntimeException(s"Failed to extract transition system from: $r")
     }
