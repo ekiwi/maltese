@@ -98,10 +98,17 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
     vs
   }
 
-  def set(name: String, step: Int, value: BVExpr): BVValueSummary = {
+  def set(name: String, step: Int, value: SMTExpr): ValueSummary = {
     assert(validCellName(name), f"Unknown cell $name")
-    assert(value.width == getWidth(name))
-    val vs = BVValueSummary(value)
+    val vs = value match {
+      case a: ArrayExpr =>
+        assert(a.indexWidth == getIndexWidth(name))
+        assert(a.dataWidth == getDataWidth(name))
+        ArrayValueSummary(a)
+      case b: BVExpr =>
+        assert(b.width == getWidth(name))
+        BVValueSummary(b)
+    }
     set(name, step, vs)
     vs
   }

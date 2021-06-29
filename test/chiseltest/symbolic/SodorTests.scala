@@ -22,8 +22,7 @@ class Sodor1StageTests extends AnyFlatSpec {
     println(sim.peek("core.d.pc_reg").toString)
     // sim.poke("io_imem_req_ready", 1)
     sim.poke("io_imem_resp_valid", 1)
-    val add = Cat(Seq(smt.BVLiteral(0, 7), smt.BVSymbol("rs2", 5), smt.BVSymbol("rs1", 5), smt.BVLiteral(0, 3), smt.BVSymbol("rd", 5), smt.BVLiteral(63, 7)))
-    sim.poke("io_imem_resp_bits_data", add)
+    sim.poke("io_imem_resp_bits_data", RiscV.symbolicAdd)
     sim.step()
     println(sim.peek("core.d.regfile").toString)
     println(sim.peek("core.d.pc_reg").toString)
@@ -32,9 +31,6 @@ class Sodor1StageTests extends AnyFlatSpec {
     println(sim.peek("core.d.pc_reg").toString)
   }
 
-  private def Cat(items: Seq[smt.BVExpr]): smt.BVExpr = {
-    require(items.nonEmpty)
-    items.drop(1).foldLeft(items.head)(smt.BVConcat)
-  }
+
 
 }

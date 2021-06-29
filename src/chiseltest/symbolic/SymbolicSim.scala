@@ -39,6 +39,11 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   private var cycleCount = 0
   doCheckAsserts() // check assertions in initial state
 
+  def step(n: Int): Unit = {
+    require(n > 0)
+    (0 until n).foreach{ _ => step() }
+  }
+
   def step(): Unit = {
     cycleCount += 1
     // apply any "sticky" pokes
@@ -78,10 +83,10 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     if(isInput(name)) { inputAssignments(name) = vs }
   }
 
-  def poke(signal: String, value: smt.BVExpr): Unit = {
+  def poke(signal: String, value: smt.SMTExpr): Unit = {
     val name = resolveSignal(signal)
     val vs = engine.set(name, cycleCount, value)
-    if(isInput(name)) { inputAssignments(name) = vs }
+    if(isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
   }
 
   def pokeMemory(signal: String, index: BigInt, value: BigInt): Unit = {
