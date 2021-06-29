@@ -42,7 +42,7 @@ object FlattenPass extends Transform with DependencyAPIMigration {
 
   private def inlines(m: ModuleTarget, inst: IsModule)(implicit children: Map[String, Seq[InstanceKey]], moduleMap: Map[String, ir.DefModule], doNotInline: Set[String]): AnnotationSeq = {
     if(doNotInline.contains(m.module)) { Seq() } else {
-      val childAnnos = children(m.module).flatMap(c => inlines(m.targetParent.module(c.module), m.instOf(c.name, c.module)))
+      val childAnnos = children(m.module).flatMap(c => inlines(m.targetParent.module(c.module), inst.instOf(c.name, c.module)))
       if(m.circuit == m.module) { // never inline the main module
         childAnnos
       } else {
