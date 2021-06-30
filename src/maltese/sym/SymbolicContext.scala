@@ -15,6 +15,8 @@ class SymbolicContext(val opts: Options) {
   def isUnSat(expr: BVExpr): Boolean = {
     assert(expr.width == 1, "satisfiability checks require a boolean formula")
     // TODO: add optimizations and caching
+    // println()
+    // println(expr)
     solver.check(expr, false).isUnSat
   }
   def isSat(value: BVValueSummary): Boolean = {

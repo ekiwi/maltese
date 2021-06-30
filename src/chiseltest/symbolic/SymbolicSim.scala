@@ -18,7 +18,9 @@ import java.io.File
 import scala.collection.mutable
 
 
-class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAsserts: Boolean) {
+class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAsserts: Boolean, seed: Long = 0) {
+  private val rand = new scala.util.Random(seed)
+
   // we do not support assumptions at the moment
   private val assumptions =  sys.signals.filter(_.lbl == IsConstraint)
   require(assumptions.isEmpty, "Assumptions are currently not supported!")
@@ -106,6 +108,39 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     new Value(engine.makeBVSymbol(name, width))
   }
 
+  // assigns random concrete values to each state
+  def randomizeStates(skipInitialized: Boolean = false): Unit = {
+    sys.states.foreach {
+      case s @ mc.State(sym: smt.BVSymbol, _, _) =>
+        val value = BigInt(sym.width, rand)
+        if(s.init.isEmpty || !skipInitialized) {
+          poke(sym.name, value)
+        }
+      case s @ mc.State(sym: smt.ArraySymbol, _, _) =>
+        val value = BigInt(sym.dataWidth, rand)
+        val array = smt.ArrayConstant(smt.BVLiteral(value, sym.dataWidth), sym.indexWidth)
+        if(s.init.isEmpty || !skipInitialized) {
+          poke(sym.name, array)
+        }
+    }
+  }
+
+  def stepAndMonitor(n: Int, signals: Seq[String]): Unit = {
+    require(n >= 0)
+    (0 until n).foreach { _ =>
+      printSignals(signals)
+      step()
+    }
+    printSignals(signals)
+  }
+
+  private def printSignals(signals: Seq[String]): Unit = {
+    println(s"--- Step #$cycleCount")
+    signals.foreach { signal =>
+      println(s"$signal: ${peek(signal)}")
+    }
+  }
+
   def assert(v: Value, msg: => String = ""): Unit = {
     val vs = Value.getValueSummary(v).asInstanceOf[BVValueSummary]
     if(vs.isSat) {
@@ -159,8 +194,6 @@ private object Value {
 
 
 object SymbolicSim {
-  // TODO: add function to start with firrtl or a Chisel circuit
-
   def loadBtor(filename: String): SymbolicSim = loadBtor(filename, false)
   def loadBtor(filename: String, ignoreAsserts: Boolean): SymbolicSim = {
     // load transition system from file
