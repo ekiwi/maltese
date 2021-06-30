@@ -1,0 +1,7 @@
+[
+  {
+    "class":"firrtl.annotations.MemoryScalarInitAnnotation",
+    "target":"~ServTopWithRam|Ram>memory",
+    "value":0
+  }
+]

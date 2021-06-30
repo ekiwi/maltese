@@ -5,7 +5,7 @@
 package chiseltest.symbolic
 
 import firrtl.AnnotationSeq
-import firrtl.options.Dependency
+import firrtl.options.{Dependency, InputAnnotationFileAnnotation}
 import firrtl.passes.InlineInstances
 import firrtl.stage.{FirrtlFileAnnotation, FirrtlSourceAnnotation, FirrtlStage, RunFirrtlTransformAnnotation}
 import maltese.mc
@@ -231,10 +231,12 @@ object SymbolicSim {
     if(verbose) { println(simplified.serialize) }
     new SymbolicSim(simplified, renames = renames, ignoreAsserts = ignoreAsserts)
   }
-  def loadFirrtlFile(filename: String): SymbolicSim = loadFirrtlFile(filename, false)
-  def loadFirrtlFile(filename: String, ignoreAsserts: Boolean): SymbolicSim = {
+  def loadFirrtlFile(filename: String): SymbolicSim = loadFirrtlFile(filename, "", false)
+  def loadFirrtlFile(filename: String, annoFile: String): SymbolicSim = loadFirrtlFile(filename, annoFile, false)
+  def loadFirrtlFile(filename: String, annoFile: String, ignoreAsserts: Boolean): SymbolicSim = {
     val in = FirrtlFileAnnotation(filename)
-    loadFirrtl(Seq(in), ignoreAsserts)
+    val inAnnos = if(annoFile.isEmpty) List() else List(InputAnnotationFileAnnotation(annoFile))
+    loadFirrtl(Seq(in) ++ inAnnos, ignoreAsserts)
   }
 
   private val verbose = false
