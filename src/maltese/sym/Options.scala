@@ -4,7 +4,7 @@
 
 package maltese.sym
 
-import maltese.smt.solvers.{Solver, Yices2}
+import maltese.smt.solvers._
 import com.github.javabdd.{BDDFactory, JFactory}
 
 case class Options(
@@ -44,7 +44,7 @@ object Options {
     ConvertBooleanOpsInSmtToBdd = true,
     CheckITEConditionWithSmtSolver = false,
     ImportBooleanExpressionsIntoGuard = true,
-    makeSolver = () => Yices2(),
+    makeSolver = () => new Z3SMTLib,
     makeBdds = () => JFactory.init(100, 100),
   )
 }
