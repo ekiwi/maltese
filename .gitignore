@@ -25,3 +25,6 @@
 
 # unfortunate firrtl artifacts
 /*.btor2
+
+# system debug output
+/*.sys

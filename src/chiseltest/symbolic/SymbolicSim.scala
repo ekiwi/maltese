@@ -229,6 +229,9 @@ object SymbolicSim {
     val sysWithNextInitNodes = CreateInitAndNextSignals.run(sys)
     val simplified = sysWithNextInitNodes // simplifySystem(sys)
     if(verbose) { println(simplified.serialize) }
+    // save system
+    val sysFile = os.pwd / (sys.name + ".sys")
+    os.write.over(sysFile, sys.serialize + "\n")
     new SymbolicSim(simplified, renames = renames, ignoreAsserts = ignoreAsserts)
   }
   def loadFirrtlFile(filename: String): SymbolicSim = loadFirrtlFile(filename, "", false)
