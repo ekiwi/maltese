@@ -3348,10 +3348,7 @@ circuit Sodor3Stage :
     cmem regfile : UInt<32>[32]
     infer mport _T_148 = regfile[io.ddpath.addr], clock @[dpath.scala 115:30]
     io.ddpath.rdata <= _T_148 @[dpath.scala 115:20]
-    when io.ddpath.validreq : @[dpath.scala 116:28]
-      infer mport _T_149 = regfile[io.ddpath.addr], clock @[dpath.scala 117:14]
-      _T_149 <= io.ddpath.wdata @[dpath.scala 117:31]
-      skip @[dpath.scala 116:28]
+    ; removed debug write to regfile
     node _T_151 = neq(wb_reg_wbaddr, UInt<1>("h00")) @[dpath.scala 121:47]
     node _T_152 = and(wb_reg_ctrl.rf_wen, _T_151) @[dpath.scala 121:29]
     when _T_152 : @[dpath.scala 122:4]

@@ -2966,10 +2966,7 @@ circuit Sodor1Stage :
       skip @[dpath.scala 86:4]
     infer mport _T_108 = regfile[io.ddpath.addr], clock @[dpath.scala 91:30]
     io.ddpath.rdata <= _T_108 @[dpath.scala 91:20]
-    when io.ddpath.validreq : @[dpath.scala 92:28]
-      infer mport _T_109 = regfile[io.ddpath.addr], clock @[dpath.scala 93:14]
-      _T_109 <= io.ddpath.wdata @[dpath.scala 93:31]
-      skip @[dpath.scala 92:28]
+    ; removed debug write to regfile
     node _T_111 = neq(rs1_addr, UInt<1>("h00")) @[dpath.scala 97:33]
     infer mport _T_112 = regfile[rs1_addr], clock @[dpath.scala 97:49]
     node rs1_data = mux(_T_111, _T_112, UInt<32>("h00")) @[dpath.scala 97:22]
