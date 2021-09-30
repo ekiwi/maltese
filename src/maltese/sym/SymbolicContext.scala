@@ -9,7 +9,8 @@ import maltese.smt._
 import maltese.bdd._
 
 class SymbolicContext(val opts: Options) {
-  private val solver = opts.makeSolver()
+  private val solver = opts.solver.createContext()
+  solver.setLogic("QF_AUFBV")
 
   def isUnSat(bdd: BDD): Boolean = isUnSat(bddConverter.bddToSmt(bdd))
   def isUnSat(expr: BVExpr): Boolean = {

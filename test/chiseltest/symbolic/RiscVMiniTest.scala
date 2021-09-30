@@ -6,7 +6,7 @@ package chiseltest.symbolic
 
 import maltese.smt
 import maltese.smt.DeclareFunction
-import maltese.smt.solvers.{Yices2, Yices2SMTLib}
+import maltese.smt.solvers.{Yices2, Yices2SMTLib, Z3SMTLib}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class RiscVMiniTest extends AnyFlatSpec {
@@ -59,8 +59,8 @@ object RiscV {
     smt.ArrayIte(isX0(addr), BaseRegs, smt.ArrayStore(BaseRegs, addr, value))
 
   lazy val solver = {
-    val s = new Yices2SMTLib
-    s.setLogic(smt.solvers.QF_ABV)
+    val s = Z3SMTLib.createContext()
+    s.setLogic("QF_AUFBV")
     // declare all inputs
     Seq(BaseRegs, Rs1, Rs2, Rd).map(DeclareFunction(_, Seq())).foreach(s.runCommand)
     s

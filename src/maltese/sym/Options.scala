@@ -33,7 +33,7 @@ case class Options(
   // This way the value summary will always have max. two entries.
   ImportBooleanExpressionsIntoGuard: Boolean,
   // SMT solver to use
-  makeSolver : () => Solver,
+  solver : Solver,
   // BDD implementation
   makeBdds : () => BDDFactory,
 )
@@ -44,11 +44,7 @@ object Options {
     ConvertBooleanOpsInSmtToBdd = true,
     CheckITEConditionWithSmtSolver = false,
     ImportBooleanExpressionsIntoGuard = true,
-    makeSolver = () => {
-      val s = new Z3SMTLib
-      s.setLogic(QF_ABV)
-      s
-    },
+    solver = Z3SMTLib,
     makeBdds = () => JFactory.init(100, 100),
   )
 }
