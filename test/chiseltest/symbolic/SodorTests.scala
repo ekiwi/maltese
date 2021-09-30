@@ -11,7 +11,7 @@ class Sodor1StageTests extends AnyFlatSpec {
   behavior of "unpipelined sodor"
 
   it should "execute symbolically" in {
-    val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor1Stage.fir")
+    val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor1Stage.fir", "", ignoreAsserts = true)
 
     // set all inputs to a concrete value
     sim.inputs.foreach(sim.poke(_, 0))
@@ -36,7 +36,7 @@ class Sodor3StageTests extends AnyFlatSpec {
   behavior of "sodor w/ 3 stages"
 
   it should "execute symbolically" in {
-    val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor3Stage.fir")
+    val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor3Stage.fir", "", ignoreAsserts = true)
 
     // set all inputs to a concrete value
     sim.inputs.foreach(sim.poke(_, 0))
