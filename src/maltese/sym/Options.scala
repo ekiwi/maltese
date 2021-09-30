@@ -44,7 +44,11 @@ object Options {
     ConvertBooleanOpsInSmtToBdd = true,
     CheckITEConditionWithSmtSolver = false,
     ImportBooleanExpressionsIntoGuard = true,
-    makeSolver = () => new Z3SMTLib,
+    makeSolver = () => {
+      val s = new Z3SMTLib
+      s.setLogic(QF_ABV)
+      s
+    },
     makeBdds = () => JFactory.init(100, 100),
   )
 }

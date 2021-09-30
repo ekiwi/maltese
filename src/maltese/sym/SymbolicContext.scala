@@ -35,6 +35,9 @@ class SymbolicContext(val opts: Options) {
         solver.check(BVNot(value.symbolic), produceModel = false).isUnSat
     }
   }
+  def declare(s: SMTSymbol): Unit = {
+    solver.runCommand(DeclareFunction(s, Seq()))
+  }
 
   ///////////////// BDDs
   private val bddConverter = new BDDToSMTConverter(opts.makeBdds(), opts.ConvertBooleanOpsInSmtToBdd)

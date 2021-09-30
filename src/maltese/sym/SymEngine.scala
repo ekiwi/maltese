@@ -183,14 +183,20 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
 
   private def stateInit(state: State): ValueSummary = {
     val name = state.name + "@0"
-    symbols.getOrElseUpdate(name, SMTSymbol.fromExpr(name, state.sym)) match {
+    getSymbol(name, state.sym) match {
       case b: BVSymbol => BVValueSummary(b)
       case a: ArraySymbol => ArrayValueSummary(a)
     }
   }
 
+  private def getSymbol(name: String, template: SMTExpr): SMTSymbol = symbols.getOrElseUpdate(name, {
+    val s = SMTSymbol.fromExpr(name, template)
+    ctx.declare(s)
+    s
+  })
+
   private def inputAt(cell: Cell): BVValueSummary = {
-    val sym = symbols.getOrElseUpdate(cell.id, BVSymbol(cell.id, inputs(cell.signal).width)).asInstanceOf[BVSymbol]
+    val sym = getSymbol(cell.id, inputs(cell.signal)).asInstanceOf[BVSymbol]
     BVValueSummary(sym)
   }
   private def symbols = mutable.HashMap[String, SMTSymbol]()
@@ -202,6 +208,7 @@ class SymEngine private(sys: TransitionSystem, noInit: Boolean, opts: Options) {
         BVValueSummary(sym)
       case None =>
         val sym = BVSymbol(name, width)
+        ctx.declare(sym)
         symbols(name) = sym
         BVValueSummary(sym)
     }
