@@ -52,7 +52,8 @@ class RiscVMiniTest extends AnyFlatSpec {
 
 
     val monitorSignals = Seq(
-      "io_icache_req_valid", "c_io_dcache_req_bits_mask", "c.mem", "io_icache_req_valid"
+      "io_icache_req_valid", "c_io_dcache_req_bits_mask", "c.mem", "io_icache_req_valid",
+      "dpath.csr.mcause", "dpath.pc", "dpath.fe_pc", "dpath.ew_pc",
     )
 
     // provide a nop
@@ -74,12 +75,16 @@ class RiscVMiniTest extends AnyFlatSpec {
       sim.stepAndMonitor(1, monitorSignals)
     }
 
+    sim.stepAndMonitor(1, monitorSignals)
+
     val memNext = sim.peek("c.mem")
     // TODO: actually check result!
-    if(false) {
+    if(true) {
       println()
       println("Result:")
-      println(memNext.getSMT)
+      val r = memNext.getSMT
+      val s = SMTSimplifier.simplify(r)
+      println(s)
     }
   }
 }
@@ -91,7 +96,7 @@ object RiscV {
   val Rd = BVSymbol("rd", 5)
   val Imm = BVSymbol("imm", 12)
   // byte based main memory
-  val Mem = ArraySymbol("mem", indexWidth = 32 + 2, dataWidth = 8)
+  val Mem = ArraySymbol("mem", indexWidth = 32, dataWidth = 8)
 
   val symbolicAdd = Cat(Seq(BVLiteral(0, 7), Rs2, Rs1, BVLiteral(0, 3), Rd, BVLiteral(51, 7)))
   private def Cat(items: Seq[BVExpr]): BVExpr = {

@@ -1760,7 +1760,7 @@ circuit Core :
   ;   val io_dcache_resp_valid = IO(Output(Bool()))
   ;   val io_dcache_resp_bits_data = IO(Output(UInt(32.W)))
   ;
-  ;   val mem = Mem(BigInt(1) << (32 + 2), UInt(8.W))
+  ;   val mem = Mem(BigInt(1) << 32, UInt(8.W))
   ; 
   ;   val addrMsb = io_dcache_req_bits_addr(31,2)
   ; 
@@ -1788,6 +1788,7 @@ circuit Core :
   ;
   ; println((new ChiselStage).emitChirrtl(new FakeDCache))
 
+
   module FakeDCache :
     input clock : Clock
     input reset : UInt<1>
@@ -1798,46 +1799,45 @@ circuit Core :
     output io_dcache_resp_valid : UInt<1>
     output io_dcache_resp_bits_data : UInt<32>
 
-    cmem mem : UInt<8> [17179869184] @[main.scala 17:16]
-    node addrMsb = bits(io_dcache_req_bits_addr, 31, 2) @[main.scala 19:40]
-    io_dcache_resp_valid <= UInt<1>("h1") @[main.scala 22:24]
-    node _io_dcache_resp_bits_data_T = cat(addrMsb, UInt<2>("h3")) @[main.scala 24:22]
-    read mport io_dcache_resp_bits_data_MPORT = mem[_io_dcache_resp_bits_data_T], clock @[main.scala 24:13]
-    node _io_dcache_resp_bits_data_T_1 = cat(addrMsb, UInt<2>("h2")) @[main.scala 25:22]
-    read mport io_dcache_resp_bits_data_MPORT_1 = mem[_io_dcache_resp_bits_data_T_1], clock @[main.scala 25:13]
-    node _io_dcache_resp_bits_data_T_2 = cat(io_dcache_resp_bits_data_MPORT, io_dcache_resp_bits_data_MPORT_1) @[main.scala 24:35]
-    node _io_dcache_resp_bits_data_T_3 = cat(addrMsb, UInt<2>("h1")) @[main.scala 26:22]
-    read mport io_dcache_resp_bits_data_MPORT_2 = mem[_io_dcache_resp_bits_data_T_3], clock @[main.scala 26:13]
-    node _io_dcache_resp_bits_data_T_4 = cat(_io_dcache_resp_bits_data_T_2, io_dcache_resp_bits_data_MPORT_2) @[main.scala 25:35]
-    node _io_dcache_resp_bits_data_T_5 = cat(addrMsb, UInt<2>("h0")) @[main.scala 27:22]
-    read mport io_dcache_resp_bits_data_MPORT_3 = mem[_io_dcache_resp_bits_data_T_5], clock @[main.scala 27:13]
-    node _io_dcache_resp_bits_data_T_6 = cat(_io_dcache_resp_bits_data_T_4, io_dcache_resp_bits_data_MPORT_3) @[main.scala 26:35]
-    io_dcache_resp_bits_data <= _io_dcache_resp_bits_data_T_6 @[main.scala 23:28]
-    node _T = bits(io_dcache_req_bits_mask, 3, 3) @[main.scala 29:31]
-    when _T : @[main.scala 29:36]
-      node _T_1 = cat(addrMsb, UInt<2>("h3")) @[main.scala 30:23]
-      node _T_2 = bits(io_dcache_req_bits_data, 31, 24) @[main.scala 30:59]
+    cmem mem : UInt<8> [4294967296] @[main.scala 15:16]
+    node addrMsb = bits(io_dcache_req_bits_addr, 31, 2) @[main.scala 17:40]
+    io_dcache_resp_valid <= UInt<1>("h1") @[main.scala 20:24]
+    node _io_dcache_resp_bits_data_T = cat(addrMsb, UInt<2>("h3")) @[main.scala 22:22]
+    read mport io_dcache_resp_bits_data_MPORT = mem[_io_dcache_resp_bits_data_T], clock @[main.scala 22:13]
+    node _io_dcache_resp_bits_data_T_1 = cat(addrMsb, UInt<2>("h2")) @[main.scala 23:22]
+    read mport io_dcache_resp_bits_data_MPORT_1 = mem[_io_dcache_resp_bits_data_T_1], clock @[main.scala 23:13]
+    node _io_dcache_resp_bits_data_T_2 = cat(io_dcache_resp_bits_data_MPORT, io_dcache_resp_bits_data_MPORT_1) @[main.scala 22:35]
+    node _io_dcache_resp_bits_data_T_3 = cat(addrMsb, UInt<2>("h1")) @[main.scala 24:22]
+    read mport io_dcache_resp_bits_data_MPORT_2 = mem[_io_dcache_resp_bits_data_T_3], clock @[main.scala 24:13]
+    node _io_dcache_resp_bits_data_T_4 = cat(_io_dcache_resp_bits_data_T_2, io_dcache_resp_bits_data_MPORT_2) @[main.scala 23:35]
+    node _io_dcache_resp_bits_data_T_5 = cat(addrMsb, UInt<2>("h0")) @[main.scala 25:22]
+    read mport io_dcache_resp_bits_data_MPORT_3 = mem[_io_dcache_resp_bits_data_T_5], clock @[main.scala 25:13]
+    node _io_dcache_resp_bits_data_T_6 = cat(_io_dcache_resp_bits_data_T_4, io_dcache_resp_bits_data_MPORT_3) @[main.scala 24:35]
+    io_dcache_resp_bits_data <= _io_dcache_resp_bits_data_T_6 @[main.scala 21:28]
+    node _T = bits(io_dcache_req_bits_mask, 3, 3) @[main.scala 27:31]
+    when _T : @[main.scala 27:36]
+      node _T_1 = cat(addrMsb, UInt<2>("h3")) @[main.scala 28:23]
+      node _T_2 = bits(io_dcache_req_bits_data, 31, 24) @[main.scala 28:59]
       write mport MPORT = mem[_T_1], clock
       MPORT <= _T_2
-    node _T_3 = bits(io_dcache_req_bits_mask, 2, 2) @[main.scala 32:31]
-    when _T_3 : @[main.scala 32:36]
-      node _T_4 = cat(addrMsb, UInt<2>("h2")) @[main.scala 33:23]
-      node _T_5 = bits(io_dcache_req_bits_data, 23, 16) @[main.scala 33:59]
+    node _T_3 = bits(io_dcache_req_bits_mask, 2, 2) @[main.scala 30:31]
+    when _T_3 : @[main.scala 30:36]
+      node _T_4 = cat(addrMsb, UInt<2>("h2")) @[main.scala 31:23]
+      node _T_5 = bits(io_dcache_req_bits_data, 23, 16) @[main.scala 31:59]
       write mport MPORT_1 = mem[_T_4], clock
       MPORT_1 <= _T_5
-    node _T_6 = bits(io_dcache_req_bits_mask, 1, 1) @[main.scala 35:31]
-    when _T_6 : @[main.scala 35:36]
-      node _T_7 = cat(addrMsb, UInt<2>("h1")) @[main.scala 36:23]
-      node _T_8 = bits(io_dcache_req_bits_data, 15, 8) @[main.scala 36:59]
+    node _T_6 = bits(io_dcache_req_bits_mask, 1, 1) @[main.scala 33:31]
+    when _T_6 : @[main.scala 33:36]
+      node _T_7 = cat(addrMsb, UInt<2>("h1")) @[main.scala 34:23]
+      node _T_8 = bits(io_dcache_req_bits_data, 15, 8) @[main.scala 34:59]
       write mport MPORT_2 = mem[_T_7], clock
       MPORT_2 <= _T_8
-    node _T_9 = bits(io_dcache_req_bits_mask, 0, 0) @[main.scala 38:31]
-    when _T_9 : @[main.scala 38:36]
-      node _T_10 = cat(addrMsb, UInt<2>("h0")) @[main.scala 39:23]
-      node _T_11 = bits(io_dcache_req_bits_data, 7, 0) @[main.scala 39:59]
+    node _T_9 = bits(io_dcache_req_bits_mask, 0, 0) @[main.scala 36:31]
+    when _T_9 : @[main.scala 36:36]
+      node _T_10 = cat(addrMsb, UInt<2>("h0")) @[main.scala 37:23]
+      node _T_11 = bits(io_dcache_req_bits_data, 7, 0) @[main.scala 37:59]
       write mport MPORT_3 = mem[_T_10], clock
       MPORT_3 <= _T_11
-
 
   module Core :
     input clock : Clock
