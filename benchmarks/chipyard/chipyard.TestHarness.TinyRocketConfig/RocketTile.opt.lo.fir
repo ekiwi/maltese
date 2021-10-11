@@ -3266,7 +3266,6 @@ circuit RocketTile :
     inst bpu of BreakpointUnit @[RocketCore.scala 323:19]
     inst alu of ALU @[RocketCore.scala 385:19]
     inst div of MulDiv @[RocketCore.scala 409:19]
-    inst PlusArgTimeout of PlusArgTimeout @[PlusArg.scala 89:11]
     reg id_reg_pause : UInt<1>, clock with :
       reset => (UInt<1>("h0"), id_reg_pause) @[RocketCore.scala 114:25]
     reg imem_might_request_reg : UInt<1>, clock with :
@@ -4637,9 +4636,6 @@ circuit RocketTile :
     coreMonitorBundle_rd0val_REG <= coreMonitorBundle_rd0val_x20 @[RocketCore.scala 896:34]
     coreMonitorBundle_rd1val_x26 <= mux(ex_reg_rs_bypass_1, _ex_rs_T_12, _ex_rs_T_13) @[RocketCore.scala 375:14]
     coreMonitorBundle_rd1val_REG <= coreMonitorBundle_rd1val_x26 @[RocketCore.scala 898:34]
-    PlusArgTimeout.clock <= clock
-    PlusArgTimeout.reset <= reset
-    PlusArgTimeout.io_count <= csr.io_time @[PlusArg.scala 89:82]
     printf(clock, and(csr.io_trace_0_valid, _T_141), "C%d: %d [%d] pc=[%x] W[r%d=%x][%d] R[r%d=%x] R[r%d=%x] inst=[%x] DASM(%x)\n", io_hartid, _io_fpu_time_T, coreMonitorBundle_valid, coreMonitorBundle_pc, _T_130, _T_131, coreMonitorBundle_wrenx, _T_133, _T_135, _T_137, _T_139, coreMonitorBundle_inst, coreMonitorBundle_inst) @[RocketCore.scala 931:13]
 
   module TLB :
@@ -7875,19 +7871,6 @@ circuit RocketTile :
     divisor <= mux(_T_36, _divisor_T, _GEN_3) @[Multiplier.scala 165:24 171:13]
     remainder <= mux(_T_36, pad(lhs_in, 66), _GEN_17) @[Multiplier.scala 165:24 172:15]
 
-  module PlusArgTimeout :
-    input clock : Clock
-    input reset : UInt<1>
-    input io_count : UInt<32>
-
-    inst plusarg_reader of plusarg_reader @[PlusArg.scala 62:19]
-    node _T = gt(plusarg_reader.out, UInt<32>("h0")) @[PlusArg.scala 63:13]
-    node _T_1 = lt(io_count, plusarg_reader.out) @[PlusArg.scala 64:22]
-    node _T_3 = or(_T_1, reset) @[PlusArg.scala 64:12]
-    node _T_4 = not(_T_3) @[PlusArg.scala 64:12]
-    printf(clock, and(_T, _T_4), "Assertion failed: Timeout exceeded: Kill the emulation after INT rdtime cycles. Off if 0.\n    at PlusArg.scala:64 assert (io.count < max, s\"Timeout exceeded: $docstring\")\n") @[PlusArg.scala 64:12]
-    stop(clock, and(_T, _T_4), 1) @[PlusArg.scala 64:12]
-
   module PMPChecker :
     input io_prv : UInt<2>
     input io_pmp_0_cfg_l : UInt<1>
@@ -8566,9 +8549,3 @@ circuit RocketTile :
     io_out_rs2 <= mux(_io_out_T_61, io_out_s_24_rs2, _io_out_T_60_rs2) @[package.scala 32:76]
     io_rvc <= neq(_io_rvc_T, UInt<2>("h3")) @[RVC.scala 163:26]
 
-  extmodule plusarg_reader :
-    output out : UInt<32>
-    defname = plusarg_reader
-    parameter FORMAT = "max_core_cycles=%d"
-    parameter DEFAULT = 0
-    parameter WIDTH = 32
