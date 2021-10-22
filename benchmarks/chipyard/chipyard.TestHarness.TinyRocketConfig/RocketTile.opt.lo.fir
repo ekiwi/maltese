@@ -2,22 +2,6 @@ circuit RocketTile :
   module RocketTile :
     input clock : Clock
     input reset : UInt<1>
-    output auto_broadcast_out_1_0_valid : UInt<1>
-    output auto_broadcast_out_1_0_iaddr : UInt<32>
-    output auto_broadcast_out_1_0_insn : UInt<32>
-    output auto_broadcast_out_1_0_priv : UInt<3>
-    output auto_broadcast_out_1_0_exception : UInt<1>
-    output auto_broadcast_out_1_0_interrupt : UInt<1>
-    output auto_broadcast_out_1_0_cause : UInt<32>
-    output auto_broadcast_out_1_0_tval : UInt<32>
-    output auto_broadcast_out_0_0_valid : UInt<1>
-    output auto_broadcast_out_0_0_iaddr : UInt<32>
-    output auto_broadcast_out_0_0_insn : UInt<32>
-    output auto_broadcast_out_0_0_priv : UInt<3>
-    output auto_broadcast_out_0_0_exception : UInt<1>
-    output auto_broadcast_out_0_0_interrupt : UInt<1>
-    output auto_broadcast_out_0_0_cause : UInt<32>
-    output auto_broadcast_out_0_0_tval : UInt<32>
     output auto_slave_in_a_ready : UInt<1>
     input auto_slave_in_a_valid : UInt<1>
     input auto_slave_in_a_bits_opcode : UInt<3>
@@ -52,12 +36,6 @@ circuit RocketTile :
     output auto_trace_core_source_out_priv : UInt<4>
     output auto_trace_core_source_out_tval : UInt<32>
     output auto_trace_core_source_out_cause : UInt<32>
-    input auto_nmi_in_rnmi : UInt<1>
-    input auto_nmi_in_rnmi_interrupt_vector : UInt<32>
-    input auto_nmi_in_rnmi_exception_vector : UInt<32>
-    input auto_nmi_in_unmi : UInt<1>
-    input auto_nmi_in_unmi_interrupt_vector : UInt<32>
-    input auto_nmi_in_unmi_exception_vector : UInt<32>
     input auto_reset_vector_in : UInt<32>
     input auto_hartid_in : UInt<1>
     input auto_tl_other_masters_out_a_ready : UInt<1>
@@ -86,7 +64,6 @@ circuit RocketTile :
     inst intXbar of IntXbar_1 @[BaseTile.scala 197:37]
     inst broadcast of BundleBridgeNexus_4 @[BundleBridge.scala 196:31]
     inst broadcast_1 of BundleBridgeNexus_5 @[BundleBridge.scala 196:31]
-    inst broadcast_3 of BundleBridgeNexus_8 @[BundleBridge.scala 196:31]
     inst dcache of DCache @[HellaCache.scala 265:43]
     inst frontend of Frontend @[Frontend.scala 350:28]
     inst dtim_adapter of ScratchpadSlavePort @[RocketTile.scala 62:15]
@@ -96,22 +73,6 @@ circuit RocketTile :
     inst core of Rocket @[RocketTile.scala 140:20]
     reg bundleOut_0_0_REG : UInt<1>, clock with :
       reset => (UInt<1>("h0"), bundleOut_0_0_REG) @[Interrupts.scala 129:36]
-    auto_broadcast_out_1_0_valid <= broadcast_3.auto_out_1_0_valid @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_iaddr <= broadcast_3.auto_out_1_0_iaddr @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_insn <= broadcast_3.auto_out_1_0_insn @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_priv <= broadcast_3.auto_out_1_0_priv @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_exception <= broadcast_3.auto_out_1_0_exception @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_interrupt <= broadcast_3.auto_out_1_0_interrupt @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_cause <= broadcast_3.auto_out_1_0_cause @[LazyModule.scala 311:12]
-    auto_broadcast_out_1_0_tval <= broadcast_3.auto_out_1_0_tval @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_valid <= broadcast_3.auto_out_0_0_valid @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_iaddr <= broadcast_3.auto_out_0_0_iaddr @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_insn <= broadcast_3.auto_out_0_0_insn @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_priv <= broadcast_3.auto_out_0_0_priv @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_exception <= broadcast_3.auto_out_0_0_exception @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_interrupt <= broadcast_3.auto_out_0_0_interrupt @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_cause <= broadcast_3.auto_out_0_0_cause @[LazyModule.scala 311:12]
-    auto_broadcast_out_0_0_tval <= broadcast_3.auto_out_0_0_tval @[LazyModule.scala 311:12]
     auto_slave_in_a_ready <= tlSlaveXbar.auto_in_a_ready @[Nodes.scala 1207:84 LazyModule.scala 298:16]
     auto_slave_in_d_valid <= tlSlaveXbar.auto_in_d_valid @[Nodes.scala 1207:84 LazyModule.scala 298:16]
     auto_slave_in_d_bits_opcode <= tlSlaveXbar.auto_in_d_bits_opcode @[Nodes.scala 1207:84 LazyModule.scala 298:16]
@@ -183,14 +144,6 @@ circuit RocketTile :
     intXbar.auto_int_in_0_0 <= auto_int_local_in_0_0 @[Nodes.scala 1210:84 LazyModule.scala 309:16]
     broadcast.auto_in <= auto_hartid_in @[Nodes.scala 1210:84 LazyModule.scala 309:16]
     broadcast_1.auto_in <= auto_reset_vector_in @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    broadcast_3.auto_in_0_valid <= core.io_trace_0_valid @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_iaddr <= core.io_trace_0_iaddr @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_insn <= core.io_trace_0_insn @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_priv <= core.io_trace_0_priv @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_exception <= core.io_trace_0_exception @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_interrupt <= core.io_trace_0_interrupt @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_cause <= core.io_trace_0_cause @[Nodes.scala 1207:84 RocketTile.scala 165:32]
-    broadcast_3.auto_in_0_tval <= core.io_trace_0_tval @[Nodes.scala 1207:84 RocketTile.scala 165:32]
     dcache.gated_clock <= clock
     dcache.reset <= reset
     dcache.auto_out_a_ready <= tlMasterXbar.auto_in_0_a_ready @[LazyModule.scala 296:16]
@@ -728,49 +681,6 @@ circuit RocketTile :
     output auto_out_1 : UInt<32>
 
     auto_out_1 <= auto_in @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-
-  module BundleBridgeNexus_8 :
-    input auto_in_0_valid : UInt<1>
-    input auto_in_0_iaddr : UInt<32>
-    input auto_in_0_insn : UInt<32>
-    input auto_in_0_priv : UInt<3>
-    input auto_in_0_exception : UInt<1>
-    input auto_in_0_interrupt : UInt<1>
-    input auto_in_0_cause : UInt<32>
-    input auto_in_0_tval : UInt<32>
-    output auto_out_1_0_valid : UInt<1>
-    output auto_out_1_0_iaddr : UInt<32>
-    output auto_out_1_0_insn : UInt<32>
-    output auto_out_1_0_priv : UInt<3>
-    output auto_out_1_0_exception : UInt<1>
-    output auto_out_1_0_interrupt : UInt<1>
-    output auto_out_1_0_cause : UInt<32>
-    output auto_out_1_0_tval : UInt<32>
-    output auto_out_0_0_valid : UInt<1>
-    output auto_out_0_0_iaddr : UInt<32>
-    output auto_out_0_0_insn : UInt<32>
-    output auto_out_0_0_priv : UInt<3>
-    output auto_out_0_0_exception : UInt<1>
-    output auto_out_0_0_interrupt : UInt<1>
-    output auto_out_0_0_cause : UInt<32>
-    output auto_out_0_0_tval : UInt<32>
-
-    auto_out_1_0_valid <= auto_in_0_valid @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_iaddr <= auto_in_0_iaddr @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_insn <= auto_in_0_insn @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_priv <= auto_in_0_priv @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_exception <= auto_in_0_exception @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_interrupt <= auto_in_0_interrupt @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_cause <= auto_in_0_cause @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_1_0_tval <= auto_in_0_tval @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_valid <= auto_in_0_valid @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_iaddr <= auto_in_0_iaddr @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_insn <= auto_in_0_insn @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_priv <= auto_in_0_priv @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_exception <= auto_in_0_exception @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_interrupt <= auto_in_0_interrupt @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_cause <= auto_in_0_cause @[Nodes.scala 1210:84 LazyModule.scala 309:16]
-    auto_out_0_0_tval <= auto_in_0_tval @[Nodes.scala 1210:84 LazyModule.scala 309:16]
 
   module DCache :
     input gated_clock : Clock
@@ -1344,10 +1254,6 @@ circuit RocketTile :
     node _pstore_drain_structural_T_1 = and(s1_valid, s1_write) @[DCache.scala 481:85]
     node _pstore_drain_structural_T_2 = or(_pstore_drain_structural_T_1, pstore1_rmw_r) @[DCache.scala 481:98]
     node pstore_drain_structural = and(_pstore_drain_structural_T, _pstore_drain_structural_T_2) @[DCache.scala 481:71]
-    node _T_219 = eq(pstore1_valid, pstore1_valid) @[DCache.scala 482:63]
-    node _T_220 = or(pstore1_rmw_r, _T_219) @[DCache.scala 482:22]
-    node _T_222 = or(_T_220, reset) @[DCache.scala 482:9]
-    node _T_223 = not(_T_222) @[DCache.scala 482:9]
     node _pstore_drain_T_6 = not(pstore1_rmw_r) @[DCache.scala 490:44]
     node _pstore_drain_T_7 = and(pstore1_valid, _pstore_drain_T_6) @[DCache.scala 490:41]
     node _pstore_drain_T_8 = or(_pstore_drain_T_7, pstore2_valid) @[DCache.scala 490:58]
@@ -1613,6 +1519,9 @@ circuit RocketTile :
     node _s1_flush_valid_T_1 = not(s1_flush_valid) @[DCache.scala 984:48]
     node _s1_flush_valid_T_2 = and(_s1_flush_valid_T, _s1_flush_valid_T_1) @[DCache.scala 984:45]
     node _T_297 = not(grantIsCached) @[DCache.scala 1103:35]
+    node _GEN_226 = and(_T_244, grantIsCached) @[DCache.scala 649:13]
+    node _GEN_229 = and(_T_244, _T_297) @[DCache.scala 659:17]
+    node _GEN_230 = and(_GEN_229, d_last) @[DCache.scala 659:17]
     auto_out_a_valid <= and(s2_valid_miss, _s2_valid_uncached_pending_T_2) @[DCache.scala 402:64]
     auto_out_a_bits_opcode <= mux(_tl_out_a_bits_T_1, UInt<3>("h4"), _tl_out_a_bits_T_5_opcode) @[DCache.scala 581:8]
     auto_out_a_bits_param <= mux(_tl_out_a_bits_T_1, UInt<3>("h0"), _tl_out_a_bits_T_5_param) @[DCache.scala 581:8]
@@ -1790,13 +1699,26 @@ circuit RocketTile :
     dataArb.io_in_3_bits_addr <= bits(_dataArb_io_in_3_bits_addr_T, 13, 0) @[DCache.scala 224:30]
     dataArb.io_in_3_bits_wdata <= dataArb.io_in_1_bits_wdata @[DCache.scala 222:25]
     dataArb.io_in_3_bits_wordMask <= UInt<1>("h1") @[DCache.scala 225:34]
+    amoalu.io_cmd <= pstore1_cmd @[DCache.scala 954:21]
+    amoalu.io_lhs <= cat(s2_data_corrected_hi, s2_data_corrected_lo) @[Cat.scala 30:58]
+    amoalu.io_rhs <= pstore1_data @[DCache.scala 956:37]
     s1_valid <= mux(reset, UInt<1>("h0"), s1_valid_x9) @[DCache.scala 162:{21,21,21}]
-    s1_req_addr <= mux(s0_clk_en, s0_req_addr, s1_req_addr) @[Reg.scala 15:16 16:{19,23}]
-    s1_req_tag <= mux(s0_clk_en, io_cpu_req_bits_tag, s1_req_tag) @[Reg.scala 15:16 16:{19,23}]
     s1_req_cmd <= mux(s0_clk_en, io_cpu_req_bits_cmd, s1_req_cmd) @[Reg.scala 15:16 16:{19,23}]
+    s2_valid <= mux(reset, UInt<1>("h0"), s2_valid_x37) @[DCache.scala 303:{21,21,21}]
+    s2_req_cmd <= mux(_T_244, _GEN_176, _GEN_37) @[DCache.scala 646:26]
+    pstore1_held <= mux(reset, UInt<1>("h0"), _pstore1_held_T_10) @[DCache.scala 476:{29,29} 493:16]
+    pstore1_addr <= mux(_pstore1_cmd_T, s1_vaddr, pstore1_addr) @[Reg.scala 15:16 16:{19,23}]
+    s1_req_addr <= mux(s0_clk_en, s0_req_addr, s1_req_addr) @[Reg.scala 15:16 16:{19,23}]
+    pstore1_mask <= mux(_pstore1_cmd_T, s1_mask, pstore1_mask) @[Reg.scala 15:16 16:{19,23}]
     s1_req_size <= mux(s0_clk_en, io_cpu_req_bits_size, s1_req_size) @[Reg.scala 15:16 16:{19,23}]
-    s1_req_signed <= mux(s0_clk_en, io_cpu_req_bits_signed, s1_req_signed) @[Reg.scala 15:16 16:{19,23}]
+    pstore2_valid <= mux(reset, UInt<1>("h0"), _pstore2_valid_T_2) @[DCache.scala 473:{30,30} 495:17]
+    pstore2_addr <= mux(advance_pstore1, pstore1_addr, pstore2_addr) @[Reg.scala 15:16 16:{19,23}]
+    mask <= mux(advance_pstore1, _pstore2_storegen_mask_mask_T_2, mask) @[DCache.scala 504:45 506:12 503:19]
+    s2_not_nacked_in_s1 <= not(s1_nack) @[DCache.scala 307:37]
+    s2_hit_state_state <= mux(_T_34, hitState_state, s2_hit_state_state) @[Reg.scala 15:16 16:{19,23}]
     s1_req_no_xcpt <= mux(s0_clk_en, io_cpu_req_bits_no_xcpt, s1_req_no_xcpt) @[Reg.scala 15:16 16:{19,23}]
+    s1_req_tag <= mux(s0_clk_en, io_cpu_req_bits_tag, s1_req_tag) @[Reg.scala 15:16 16:{19,23}]
+    s1_req_signed <= mux(s0_clk_en, io_cpu_req_bits_signed, s1_req_signed) @[Reg.scala 15:16 16:{19,23}]
     s1_tlb_req_vaddr <= mux(s0_clk_en, s0_req_addr, s1_tlb_req_vaddr) @[Reg.scala 15:16 16:{19,23}]
     s1_tlb_req_size <= mux(s0_clk_en, io_cpu_req_bits_size, s1_tlb_req_size) @[Reg.scala 15:16 16:{19,23}]
     s1_tlb_req_cmd <= mux(s0_clk_en, io_cpu_req_bits_cmd, s1_tlb_req_cmd) @[Reg.scala 15:16 16:{19,23}]
@@ -1808,11 +1730,8 @@ circuit RocketTile :
     uncachedReqs_0_signed <= mux(_T_227, s2_req_signed, uncachedReqs_0_signed) @[DCache.scala 216:25 603:26]
     s1_did_read <= mux(s0_clk_en, _s1_did_read_T_52, s1_did_read) @[Reg.scala 15:16 16:{19,23}]
     s1_read_mask <= mux(s0_clk_en, dataArb.io_in_3_bits_wordMask, s1_read_mask) @[Reg.scala 15:16 16:{19,23}]
-    s2_valid <= mux(reset, UInt<1>("h0"), s2_valid_x37) @[DCache.scala 303:{21,21,21}]
-    s2_not_nacked_in_s1 <= not(s1_nack) @[DCache.scala 307:37]
     s2_req_addr <= mux(_T_244, _GEN_180, _GEN_35) @[DCache.scala 646:26]
     s2_req_tag <= mux(_T_244, _GEN_179, _GEN_36) @[DCache.scala 646:26]
-    s2_req_cmd <= mux(_T_244, _GEN_176, _GEN_37) @[DCache.scala 646:26]
     s2_req_size <= mux(_T_244, _GEN_177, _GEN_38) @[DCache.scala 646:26]
     s2_req_signed <= mux(_T_244, _GEN_178, _GEN_39) @[DCache.scala 646:26]
     s2_req_no_xcpt <= mux(_T_34, s1_req_no_xcpt, s2_req_no_xcpt) @[DCache.scala 317:48 318:12 311:19]
@@ -1824,44 +1743,29 @@ circuit RocketTile :
     s2_tlb_xcpt_ma_st <= mux(_T_34, tlb.io_resp_ma_st, s2_tlb_xcpt_ma_st) @[DCache.scala 317:48 320:17 314:24]
     s2_vaddr_r <= mux(_T_34, s1_vaddr, s2_vaddr_r) @[Reg.scala 15:16 16:{19,23}]
     s2_flush_valid_pre_tag_ecc <= s1_flush_valid @[DCache.scala 327:43]
+    blockUncachedGrant <= mux(_T_270, _GEN_200, dataArb.io_out_valid) @[DCache.scala 723:24 724:68]
+    counter <= mux(reset, UInt<10>("h0"), _GEN_146) @[Edges.scala 228:{27,27}]
     s2_data <= mux(en, _s2_data_T_6, s2_data) @[Reg.scala 15:16 16:{19,23}]
-    s2_hit_state_state <= mux(_T_34, hitState_state, s2_hit_state_state) @[Reg.scala 15:16 16:{19,23}]
     pstore1_cmd <= mux(_pstore1_cmd_T, s1_req_cmd, pstore1_cmd) @[Reg.scala 15:16 16:{19,23}]
-    pstore1_addr <= mux(_pstore1_cmd_T, s1_vaddr, pstore1_addr) @[Reg.scala 15:16 16:{19,23}]
     pstore1_data <= mux(_pstore1_cmd_T, io_cpu_s1_data_data, pstore1_data) @[Reg.scala 15:16 16:{19,23}]
-    pstore1_mask <= mux(_pstore1_cmd_T, s1_mask, pstore1_mask) @[Reg.scala 15:16 16:{19,23}]
     pstore1_rmw_r <= mux(_pstore1_cmd_T, _pstore1_rmw_T_50, pstore1_rmw_r) @[Reg.scala 15:16 16:{19,23}]
-    pstore2_valid <= mux(reset, UInt<1>("h0"), _pstore2_valid_T_2) @[DCache.scala 473:{30,30} 495:17]
     pstore_drain_on_miss_REG <= io_cpu_s2_nack @[DCache.scala 475:56]
-    pstore1_held <= mux(reset, UInt<1>("h0"), _pstore1_held_T_10) @[DCache.scala 476:{29,29} 493:16]
-    pstore2_addr <= mux(advance_pstore1, pstore1_addr, pstore2_addr) @[Reg.scala 15:16 16:{19,23}]
     pstore2_storegen_data_lo_lo <= mux(advance_pstore1, _pstore2_storegen_data_T, pstore2_storegen_data_lo_lo) @[Reg.scala 15:16 16:{19,23}]
     pstore2_storegen_data_lo_hi <= mux(advance_pstore1, _pstore2_storegen_data_T_4, pstore2_storegen_data_lo_hi) @[Reg.scala 15:16 16:{19,23}]
     pstore2_storegen_data_hi_lo <= mux(advance_pstore1, _pstore2_storegen_data_T_8, pstore2_storegen_data_hi_lo) @[Reg.scala 15:16 16:{19,23}]
     pstore2_storegen_data_hi_hi <= mux(advance_pstore1, _pstore2_storegen_data_T_12, pstore2_storegen_data_hi_hi) @[Reg.scala 15:16 16:{19,23}]
-    mask <= mux(advance_pstore1, _pstore2_storegen_mask_mask_T_2, mask) @[DCache.scala 504:45 506:12 503:19]
-    counter <= mux(reset, UInt<10>("h0"), _GEN_146) @[Edges.scala 228:{27,27}]
-    blockUncachedGrant <= mux(_T_270, _GEN_200, dataArb.io_out_valid) @[DCache.scala 723:24 724:68]
     io_cpu_s2_xcpt_REG <= and(_s1_xcpt_valid_T_1, _s1_valid_not_nacked_T) @[DCache.scala 902:65]
     doUncachedResp <= io_cpu_replay_next @[DCache.scala 918:27]
-    amoalu.io_cmd <= pstore1_cmd @[DCache.scala 954:21]
-    amoalu.io_lhs <= cat(s2_data_corrected_hi, s2_data_corrected_lo) @[Cat.scala 30:58]
-    amoalu.io_rhs <= pstore1_data @[DCache.scala 956:37]
     printf(gated_clock, _dataArb_io_in_3_valid_T_55, "Assertion failed\n    at DCache.scala:1156 assert(!needsRead(req) || res)\n") @[DCache.scala 1156:11]
     stop(gated_clock, _dataArb_io_in_3_valid_T_55, 1) @[DCache.scala 1156:11]
     printf(gated_clock, _T_33, "Assertion failed\n    at DCache.scala:301 assert(!(s1_valid_masked && s1_req.cmd === M_PWR) || (s1_mask_xwr | ~io.cpu.s1_data.mask).andR)\n") @[DCache.scala 301:9]
     stop(gated_clock, _T_33, 1) @[DCache.scala 301:9]
     printf(gated_clock, _dataArb_io_in_3_valid_T_55, "Assertion failed\n    at DCache.scala:1156 assert(!needsRead(req) || res)\n") @[DCache.scala 1156:11]
     stop(gated_clock, _dataArb_io_in_3_valid_T_55, 1) @[DCache.scala 1156:11]
-    printf(gated_clock, _T_223, "Assertion failed\n    at DCache.scala:482 assert(pstore1_rmw || pstore1_valid_not_rmw(io.cpu.s2_kill) === pstore1_valid)\n") @[DCache.scala 482:9]
-    stop(gated_clock, _T_223, 1) @[DCache.scala 482:9]
     printf(gated_clock, _T_239, "Assertion failed\n    at DCache.scala:626 assert(!tl_out.d.valid || whole_opc.isOneOf(uncachedGrantOpcodes))\n") @[DCache.scala 626:13]
     stop(gated_clock, _T_239, 1) @[DCache.scala 626:13]
-    node _GEN_226 = and(_T_244, grantIsCached) @[DCache.scala 649:13]
     printf(gated_clock, and(_GEN_226, _T_247), "Assertion failed: A GrantData was unexpected by the dcache.\n    at DCache.scala:649 assert(cached_grant_wait, \"A GrantData was unexpected by the dcache.\")\n") @[DCache.scala 649:13]
     stop(gated_clock, and(_GEN_226, _T_247), 1) @[DCache.scala 649:13]
-    node _GEN_229 = and(_T_244, _T_297) @[DCache.scala 659:17]
-    node _GEN_230 = and(_GEN_229, d_last) @[DCache.scala 659:17]
     printf(gated_clock, and(_GEN_230, _T_252), "Assertion failed: An AccessAck was unexpected by the dcache.\n    at DCache.scala:659 assert(f, \"An AccessAck was unexpected by the dcache.\") // TODO must handle Ack coming back on same cycle!\n") @[DCache.scala 659:17]
     stop(gated_clock, and(_GEN_230, _T_252), 1) @[DCache.scala 659:17]
     printf(gated_clock, _T_266, "Assertion failed\n    at DCache.scala:688 assert(tl_out.e.fire() === (tl_out.d.fire() && d_first && grantIsCached))\n") @[DCache.scala 688:9]
@@ -2413,9 +2317,6 @@ circuit RocketTile :
     auto_out_a_bits_mask <= mux(repeater.io_full, UInt<4>("hf"), auto_in_a_bits_mask) @[Fragmenter.scala 313:31]
     auto_out_a_bits_data <= auto_in_a_bits_data @[Nodes.scala 1210:84 LazyModule.scala 309:16]
     auto_out_d_ready <= or(auto_in_d_ready, drop) @[Fragmenter.scala 223:35]
-    acknum <= mux(reset, UInt<4>("h0"), _GEN_2) @[Fragmenter.scala 189:{29,29}]
-    dOrig <= mux(_T_7, _GEN_0, dOrig) @[Fragmenter.scala 190:24 208:29]
-    dToggle <= mux(reset, UInt<1>("h0"), _GEN_4) @[Fragmenter.scala 191:{30,30}]
     repeater.clock <= clock
     repeater.reset <= reset
     repeater.io_repeat <= and(_repeater_io_repeat_T, _repeater_io_repeat_T_1) @[Fragmenter.scala 302:41]
@@ -2427,6 +2328,9 @@ circuit RocketTile :
     repeater.io_enq_bits_address <= auto_in_a_bits_address @[Nodes.scala 1210:84 LazyModule.scala 309:16]
     repeater.io_enq_bits_mask <= auto_in_a_bits_mask @[Nodes.scala 1210:84 LazyModule.scala 309:16]
     repeater.io_deq_ready <= auto_out_a_ready @[Nodes.scala 1207:84 LazyModule.scala 311:12]
+    acknum <= mux(reset, UInt<4>("h0"), _GEN_2) @[Fragmenter.scala 189:{29,29}]
+    dOrig <= mux(_T_7, _GEN_0, dOrig) @[Fragmenter.scala 190:24 208:29]
+    dToggle <= mux(reset, UInt<1>("h0"), _GEN_4) @[Fragmenter.scala 191:{30,30}]
     gennum <= mux(reset, UInt<4>("h0"), _GEN_6) @[Fragmenter.scala 291:{29,29}]
     aToggle_r <= mux(aFirst, dToggle, aToggle_r) @[Reg.scala 15:16 16:{19,23}]
     printf(clock, _T_14, "Assertion failed\n    at Fragmenter.scala:309 assert (!repeater.io.full || !aHasData)\n") @[Fragmenter.scala 309:16]
@@ -3132,9 +3036,9 @@ circuit RocketTile :
     io_dpath_perf_l2hit <= UInt<1>("h0") @[PTW.scala 263:27]
     io_dpath_perf_pte_miss <= mux(_T_111, UInt<1>("h0"), _GEN_2128) @[Conditional.scala 40:58 PTW.scala 196:26]
     io_dpath_perf_pte_hit <= UInt<1>("h0") @[PTW.scala 197:57]
+    state_barrier.io_x <= mux(_T_111, state, _GEN_2127) @[Conditional.scala 40:58]
     state <= mux(reset, UInt<3>("h0"), state_barrier.io_y) @[PTW.scala 109:{18,18} 327:9]
     count <= mux(_T_111, UInt<1>("h0"), _GEN_2125) @[Conditional.scala 40:58 PTW.scala 334:13]
-    state_barrier.io_x <= mux(_T_111, state, _GEN_2127) @[Conditional.scala 40:58]
     printf(clock, _T_66, "Assertion failed: PTE Cache Hit/Miss Performance Monitor Events are lower priority than L2TLB Hit event\n    at PTW.scala:198 assert(!(io.dpath.perf.l2hit && (io.dpath.perf.pte_miss || io.dpath.perf.pte_hit)),\n") @[PTW.scala 198:9]
     stop(clock, _T_66, 1) @[PTW.scala 198:9]
 
@@ -3242,14 +3146,6 @@ circuit RocketTile :
     output io_ptw_pmp_7_addr : UInt<30>
     output io_ptw_pmp_7_mask : UInt<32>
     output io_ptw_customCSRs_csrs_0_value : UInt<32>
-    output io_trace_0_valid : UInt<1>
-    output io_trace_0_iaddr : UInt<32>
-    output io_trace_0_insn : UInt<32>
-    output io_trace_0_priv : UInt<3>
-    output io_trace_0_exception : UInt<1>
-    output io_trace_0_interrupt : UInt<1>
-    output io_trace_0_cause : UInt<32>
-    output io_trace_0_tval : UInt<32>
     output io_wfi : UInt<1>
 
     inst ibuf of IBuf @[RocketCore.scala 254:20]
@@ -4483,15 +4379,66 @@ circuit RocketTile :
     io_ptw_pmp_7_addr <= csr.io_pmp_7_addr @[RocketCore.scala 704:14]
     io_ptw_pmp_7_mask <= csr.io_pmp_7_mask @[RocketCore.scala 704:14]
     io_ptw_customCSRs_csrs_0_value <= csr.io_customCSRs_0_value @[RocketCore.scala 702:79]
-    io_trace_0_valid <= csr.io_trace_0_valid @[RocketCore.scala 708:12]
-    io_trace_0_iaddr <= csr.io_trace_0_iaddr @[RocketCore.scala 708:12]
-    io_trace_0_insn <= csr.io_trace_0_insn @[RocketCore.scala 708:12]
-    io_trace_0_priv <= csr.io_trace_0_priv @[RocketCore.scala 708:12]
-    io_trace_0_exception <= csr.io_trace_0_exception @[RocketCore.scala 708:12]
-    io_trace_0_interrupt <= csr.io_trace_0_interrupt @[RocketCore.scala 708:12]
-    io_trace_0_cause <= csr.io_trace_0_cause @[RocketCore.scala 708:12]
-    io_trace_0_tval <= csr.io_trace_0_tval @[RocketCore.scala 708:12]
     io_wfi <= csr.io_status_wfi @[RocketCore.scala 864:10]
+    ibuf.clock <= clock
+    ibuf.reset <= reset
+    ibuf.io_imem_valid <= io_imem_resp_valid @[RocketCore.scala 258:16]
+    ibuf.io_imem_bits_pc <= io_imem_resp_bits_pc @[RocketCore.scala 258:16]
+    ibuf.io_imem_bits_data <= io_imem_resp_bits_data @[RocketCore.scala 258:16]
+    ibuf.io_imem_bits_xcpt_ae_inst <= io_imem_resp_bits_xcpt_ae_inst @[RocketCore.scala 258:16]
+    ibuf.io_imem_bits_replay <= io_imem_resp_bits_replay @[RocketCore.scala 258:16]
+    ibuf.io_kill <= or(take_pc_wb, take_pc_mem) @[RocketCore.scala 250:35]
+    ibuf.io_inst_0_ready <= not(ctrl_stalld) @[RocketCore.scala 804:28]
+    rf.id_rs_MPORT.addr <= not(id_raddr1) @[RocketCore.scala 1016:39]
+    rf.id_rs_MPORT.en <= UInt<1>("h1") @[RocketCore.scala 1016:38]
+    rf.id_rs_MPORT.clk <= clock @[RocketCore.scala 1016:38]
+    rf.id_rs_MPORT_1.addr <= not(id_raddr2) @[RocketCore.scala 1016:39]
+    rf.id_rs_MPORT_1.en <= UInt<1>("h1") @[RocketCore.scala 1016:38]
+    rf.id_rs_MPORT_1.clk <= clock @[RocketCore.scala 1016:38]
+    rf.MPORT.addr <= not(rf_waddr) @[RocketCore.scala 1016:39]
+    rf.MPORT.en <= and(rf_wen, _T_108) @[RocketCore.scala 1015:15 679:17]
+    rf.MPORT.clk <= clock @[RocketCore.scala 1027:29 1016:38]
+    rf.MPORT.data <= mux(_rf_wdata_T, io_dmem_resp_bits_data, _rf_wdata_T_5) @[RocketCore.scala 674:21]
+    rf.MPORT.mask <= UInt<1>("h1") @[RocketCore.scala 1027:29 1028:20]
+    csr.clock <= clock
+    csr.reset <= reset
+    csr.io_ungated_clock <= clock @[RocketCore.scala 682:24]
+    csr.io_interrupts_debug <= io_interrupts_debug @[RocketCore.scala 688:21]
+    csr.io_interrupts_mtip <= io_interrupts_mtip @[RocketCore.scala 688:21]
+    csr.io_interrupts_msip <= io_interrupts_msip @[RocketCore.scala 688:21]
+    csr.io_interrupts_meip <= io_interrupts_meip @[RocketCore.scala 688:21]
+    csr.io_hartid <= io_hartid @[RocketCore.scala 689:17]
+    csr.io_rw_addr <= bits(wb_reg_inst, 31, 20) @[RocketCore.scala 705:32]
+    csr.io_rw_cmd <= and(wb_ctrl_csr, _csr_io_rw_cmd_T_1) @[CSR.scala 132:9]
+    csr.io_rw_wdata <= wb_reg_wdata @[RocketCore.scala 707:19]
+    csr.io_decode_0_csr <= bits(ibuf.io_inst_0_bits_raw, 31, 20) @[RocketCore.scala 683:41]
+    csr.io_exception <= or(_T_93, _T_88) @[RocketCore.scala 975:26]
+    csr.io_retire <= and(_wb_valid_T_1, _wb_valid_T_2) @[RocketCore.scala 670:45]
+    csr.io_cause <= mux(wb_reg_xcpt, wb_reg_cause, pad(_T_98, 32)) @[Mux.scala 47:69]
+    csr.io_pc <= wb_reg_pc @[RocketCore.scala 695:13]
+    csr.io_tval <= mux(tval_valid, wb_reg_wdata, UInt<32>("h0")) @[RocketCore.scala 700:21]
+    csr.io_inst_0 <= cat(csr_io_inst_0_hi, csr_io_inst_0_lo) @[Cat.scala 30:58]
+    bpu.io_status_debug <= csr.io_status_debug @[RocketCore.scala 324:17]
+    bpu.io_bp_0_control_action <= csr.io_bp_0_control_action @[RocketCore.scala 325:13]
+    bpu.io_bp_0_control_tmatch <= csr.io_bp_0_control_tmatch @[RocketCore.scala 325:13]
+    bpu.io_bp_0_control_x <= csr.io_bp_0_control_x @[RocketCore.scala 325:13]
+    bpu.io_bp_0_control_w <= csr.io_bp_0_control_w @[RocketCore.scala 325:13]
+    bpu.io_bp_0_control_r <= csr.io_bp_0_control_r @[RocketCore.scala 325:13]
+    bpu.io_bp_0_address <= csr.io_bp_0_address @[RocketCore.scala 325:13]
+    bpu.io_pc <= ibuf.io_pc @[RocketCore.scala 326:13]
+    bpu.io_ea <= mem_reg_wdata @[RocketCore.scala 327:13]
+    alu.io_fn <= ex_ctrl_alu_fn @[RocketCore.scala 387:13]
+    alu.io_in2 <= asUInt(ex_op2) @[RocketCore.scala 388:24]
+    alu.io_in1 <= asUInt(ex_op1) @[RocketCore.scala 389:24]
+    div.clock <= clock
+    div.reset <= reset
+    div.io_req_valid <= and(ex_reg_valid, ex_ctrl_div) @[RocketCore.scala 410:36]
+    div.io_req_bits_fn <= ex_ctrl_alu_fn @[RocketCore.scala 412:22]
+    div.io_req_bits_in1 <= mux(ex_reg_rs_bypass_0, _ex_rs_T_5, _ex_rs_T_6) @[RocketCore.scala 375:14]
+    div.io_req_bits_in2 <= mux(ex_reg_rs_bypass_1, _ex_rs_T_12, _ex_rs_T_13) @[RocketCore.scala 375:14]
+    div.io_req_bits_tag <= bits(ex_reg_inst, 11, 7) @[RocketCore.scala 359:29]
+    div.io_kill <= and(killm_common, div_io_kill_REG) @[RocketCore.scala 588:31]
+    div.io_resp_ready <= mux(_T_107, UInt<1>("h0"), _ctrl_stalld_T_17) @[RocketCore.scala 649:21 662:44 663:23]
     id_reg_pause <= mux(unpause, UInt<1>("h0"), _GEN_52) @[RocketCore.scala 862:{18,33}]
     imem_might_request_reg <= or(_io_imem_might_request_imem_might_request_reg_T, _io_imem_might_request_imem_might_request_reg_T_1) @[RocketCore.scala 794:59]
     ex_ctrl_branch <= mux(_ex_reg_valid_T, id_ctrl_decoder_3, ex_ctrl_branch) @[RocketCore.scala 428:22 429:13 190:20]
@@ -4563,75 +4510,16 @@ circuit RocketTile :
     wb_reg_inst <= mux(mem_pc_valid, mem_reg_inst, wb_reg_inst) @[RocketCore.scala 596:23 605:17 243:24]
     wb_reg_raw_inst <= mux(mem_pc_valid, mem_reg_raw_inst, wb_reg_raw_inst) @[RocketCore.scala 596:23 606:21 244:28]
     wb_reg_wdata <= mux(mem_pc_valid, mem_int_wdata, wb_reg_wdata) @[RocketCore.scala 596:23 599:18 245:25]
-    ibuf.clock <= clock
-    ibuf.reset <= reset
-    ibuf.io_imem_valid <= io_imem_resp_valid @[RocketCore.scala 258:16]
-    ibuf.io_imem_bits_pc <= io_imem_resp_bits_pc @[RocketCore.scala 258:16]
-    ibuf.io_imem_bits_data <= io_imem_resp_bits_data @[RocketCore.scala 258:16]
-    ibuf.io_imem_bits_xcpt_ae_inst <= io_imem_resp_bits_xcpt_ae_inst @[RocketCore.scala 258:16]
-    ibuf.io_imem_bits_replay <= io_imem_resp_bits_replay @[RocketCore.scala 258:16]
-    ibuf.io_kill <= or(take_pc_wb, take_pc_mem) @[RocketCore.scala 250:35]
-    ibuf.io_inst_0_ready <= not(ctrl_stalld) @[RocketCore.scala 804:28]
     id_reg_fence <= mux(reset, UInt<1>("h0"), _GEN_53) @[RocketCore.scala 274:{25,25}]
-    rf.id_rs_MPORT.addr <= not(id_raddr1) @[RocketCore.scala 1016:39]
-    rf.id_rs_MPORT.en <= UInt<1>("h1") @[RocketCore.scala 1016:38]
-    rf.id_rs_MPORT.clk <= clock @[RocketCore.scala 1016:38]
-    rf.id_rs_MPORT_1.addr <= not(id_raddr2) @[RocketCore.scala 1016:39]
-    rf.id_rs_MPORT_1.en <= UInt<1>("h1") @[RocketCore.scala 1016:38]
-    rf.id_rs_MPORT_1.clk <= clock @[RocketCore.scala 1016:38]
-    rf.MPORT.addr <= not(rf_waddr) @[RocketCore.scala 1016:39]
-    rf.MPORT.en <= and(rf_wen, _T_108) @[RocketCore.scala 1015:15 679:17]
-    rf.MPORT.clk <= clock @[RocketCore.scala 1027:29 1016:38]
-    rf.MPORT.data <= mux(_rf_wdata_T, io_dmem_resp_bits_data, _rf_wdata_T_5) @[RocketCore.scala 674:21]
-    rf.MPORT.mask <= UInt<1>("h1") @[RocketCore.scala 1027:29 1028:20]
-    csr.clock <= clock
-    csr.reset <= reset
-    csr.io_ungated_clock <= clock @[RocketCore.scala 682:24]
-    csr.io_interrupts_debug <= io_interrupts_debug @[RocketCore.scala 688:21]
-    csr.io_interrupts_mtip <= io_interrupts_mtip @[RocketCore.scala 688:21]
-    csr.io_interrupts_msip <= io_interrupts_msip @[RocketCore.scala 688:21]
-    csr.io_interrupts_meip <= io_interrupts_meip @[RocketCore.scala 688:21]
-    csr.io_hartid <= io_hartid @[RocketCore.scala 689:17]
-    csr.io_rw_addr <= bits(wb_reg_inst, 31, 20) @[RocketCore.scala 705:32]
-    csr.io_rw_cmd <= and(wb_ctrl_csr, _csr_io_rw_cmd_T_1) @[CSR.scala 132:9]
-    csr.io_rw_wdata <= wb_reg_wdata @[RocketCore.scala 707:19]
-    csr.io_decode_0_csr <= bits(ibuf.io_inst_0_bits_raw, 31, 20) @[RocketCore.scala 683:41]
-    csr.io_exception <= or(_T_93, _T_88) @[RocketCore.scala 975:26]
-    csr.io_retire <= and(_wb_valid_T_1, _wb_valid_T_2) @[RocketCore.scala 670:45]
-    csr.io_cause <= mux(wb_reg_xcpt, wb_reg_cause, pad(_T_98, 32)) @[Mux.scala 47:69]
-    csr.io_pc <= wb_reg_pc @[RocketCore.scala 695:13]
-    csr.io_tval <= mux(tval_valid, wb_reg_wdata, UInt<32>("h0")) @[RocketCore.scala 700:21]
-    csr.io_inst_0 <= cat(csr_io_inst_0_hi, csr_io_inst_0_lo) @[Cat.scala 30:58]
-    bpu.io_status_debug <= csr.io_status_debug @[RocketCore.scala 324:17]
-    bpu.io_bp_0_control_action <= csr.io_bp_0_control_action @[RocketCore.scala 325:13]
-    bpu.io_bp_0_control_tmatch <= csr.io_bp_0_control_tmatch @[RocketCore.scala 325:13]
-    bpu.io_bp_0_control_x <= csr.io_bp_0_control_x @[RocketCore.scala 325:13]
-    bpu.io_bp_0_control_w <= csr.io_bp_0_control_w @[RocketCore.scala 325:13]
-    bpu.io_bp_0_control_r <= csr.io_bp_0_control_r @[RocketCore.scala 325:13]
-    bpu.io_bp_0_address <= csr.io_bp_0_address @[RocketCore.scala 325:13]
-    bpu.io_pc <= ibuf.io_pc @[RocketCore.scala 326:13]
-    bpu.io_ea <= mem_reg_wdata @[RocketCore.scala 327:13]
     ex_reg_rs_bypass_0 <= mux(_ex_reg_valid_T, _GEN_18, ex_reg_rs_bypass_0) @[RocketCore.scala 428:22 371:29]
     ex_reg_rs_bypass_1 <= mux(_ex_reg_valid_T, do_bypass_1, ex_reg_rs_bypass_1) @[RocketCore.scala 428:22 466:27 371:29]
     ex_reg_rs_lsb_0 <= mux(_ex_reg_valid_T, _GEN_19, ex_reg_rs_lsb_0) @[RocketCore.scala 428:22 372:26]
     ex_reg_rs_lsb_1 <= mux(_ex_reg_valid_T, _GEN_16, ex_reg_rs_lsb_1) @[RocketCore.scala 428:22 372:26]
     ex_reg_rs_msb_0 <= mux(_ex_reg_valid_T, _GEN_20, ex_reg_rs_msb_0) @[RocketCore.scala 428:22 373:26]
     ex_reg_rs_msb_1 <= mux(_ex_reg_valid_T, _GEN_17, ex_reg_rs_msb_1) @[RocketCore.scala 428:22 373:26]
-    alu.io_fn <= ex_ctrl_alu_fn @[RocketCore.scala 387:13]
-    alu.io_in2 <= asUInt(ex_op2) @[RocketCore.scala 388:24]
-    alu.io_in1 <= asUInt(ex_op1) @[RocketCore.scala 389:24]
-    div.clock <= clock
-    div.reset <= reset
-    div.io_req_valid <= and(ex_reg_valid, ex_ctrl_div) @[RocketCore.scala 410:36]
-    div.io_req_bits_fn <= ex_ctrl_alu_fn @[RocketCore.scala 412:22]
-    div.io_req_bits_in1 <= mux(ex_reg_rs_bypass_0, _ex_rs_T_5, _ex_rs_T_6) @[RocketCore.scala 375:14]
-    div.io_req_bits_in2 <= mux(ex_reg_rs_bypass_1, _ex_rs_T_12, _ex_rs_T_13) @[RocketCore.scala 375:14]
-    div.io_req_bits_tag <= bits(ex_reg_inst, 11, 7) @[RocketCore.scala 359:29]
-    div.io_kill <= and(killm_common, div_io_kill_REG) @[RocketCore.scala 588:31]
-    div.io_resp_ready <= mux(_T_107, UInt<1>("h0"), _ctrl_stalld_T_17) @[RocketCore.scala 649:21 662:44 663:23]
-    div_io_kill_REG <= and(div.io_req_ready, div.io_req_valid) @[Decoupled.scala 40:37]
     _r <= mux(reset, UInt<32>("h0"), _GEN_243) @[RocketCore.scala 1001:{25,25}]
     blocked <= and(_dcache_blocked_blocked_T_3, _dcache_blocked_blocked_T_5) @[RocketCore.scala 765:83]
+    div_io_kill_REG <= and(div.io_req_ready, div.io_req_valid) @[Decoupled.scala 40:37]
     coreMonitorBundle_rd0val_x20 <= mux(ex_reg_rs_bypass_0, _ex_rs_T_5, _ex_rs_T_6) @[RocketCore.scala 375:14]
     coreMonitorBundle_rd0val_REG <= coreMonitorBundle_rd0val_x20 @[RocketCore.scala 896:34]
     coreMonitorBundle_rd1val_x26 <= mux(ex_reg_rs_bypass_1, _ex_rs_T_12, _ex_rs_T_13) @[RocketCore.scala 375:14]
@@ -5040,36 +4928,36 @@ circuit RocketTile :
     node rdata_hi = cat(data_arrays_0_3.rdata_data.data, data_arrays_0_2.rdata_data.data) @[Cat.scala 30:58]
     io_resp_0 <= cat(rdata_hi, rdata_lo) @[Cat.scala 30:58]
     data_arrays_0_0.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_1.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_2.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_3.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
     data_arrays_0_0.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
-    data_arrays_0_1.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
-    data_arrays_0_2.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
-    data_arrays_0_3.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
     data_arrays_0_0.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
-    data_arrays_0_1.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
-    data_arrays_0_2.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
-    data_arrays_0_3.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
     data_arrays_0_0.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_1.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_2.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
-    data_arrays_0_3.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
     data_arrays_0_0.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
-    data_arrays_0_1.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
-    data_arrays_0_2.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
-    data_arrays_0_3.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
     data_arrays_0_0.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
-    data_arrays_0_1.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
-    data_arrays_0_2.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
-    data_arrays_0_3.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
     data_arrays_0_0.rdata_MPORT.data <= bits(io_req_bits_wdata, 7, 0) @[package.scala 202:50]
-    data_arrays_0_1.rdata_MPORT.data <= bits(io_req_bits_wdata, 15, 8) @[package.scala 202:50]
-    data_arrays_0_2.rdata_MPORT.data <= bits(io_req_bits_wdata, 23, 16) @[package.scala 202:50]
-    data_arrays_0_3.rdata_MPORT.data <= bits(io_req_bits_wdata, 31, 24) @[package.scala 202:50]
     data_arrays_0_0.rdata_MPORT.mask <= bits(io_req_bits_eccMask, 0, 0) @[DCache.scala 50:82]
+    data_arrays_0_1.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_1.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
+    data_arrays_0_1.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
+    data_arrays_0_1.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_1.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
+    data_arrays_0_1.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
+    data_arrays_0_1.rdata_MPORT.data <= bits(io_req_bits_wdata, 15, 8) @[package.scala 202:50]
     data_arrays_0_1.rdata_MPORT.mask <= bits(io_req_bits_eccMask, 1, 1) @[DCache.scala 50:82]
+    data_arrays_0_2.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_2.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
+    data_arrays_0_2.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
+    data_arrays_0_2.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_2.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
+    data_arrays_0_2.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
+    data_arrays_0_2.rdata_MPORT.data <= bits(io_req_bits_wdata, 23, 16) @[package.scala 202:50]
     data_arrays_0_2.rdata_MPORT.mask <= bits(io_req_bits_eccMask, 2, 2) @[DCache.scala 50:82]
+    data_arrays_0_3.rdata_data.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_3.rdata_data.en <= and(io_req_valid, _rdata_data_T) @[DCache.scala 71:39]
+    data_arrays_0_3.rdata_data.clk <= clock @[DCache.scala 71:{26,26}]
+    data_arrays_0_3.rdata_MPORT.addr <= shr(io_req_bits_addr, 2) @[DCache.scala 53:31]
+    data_arrays_0_3.rdata_MPORT.en <= and(io_req_valid, io_req_bits_write) @[DCache.scala 66:17]
+    data_arrays_0_3.rdata_MPORT.clk <= clock @[DCache.scala 66:39]
+    data_arrays_0_3.rdata_MPORT.data <= bits(io_req_bits_wdata, 31, 24) @[package.scala 202:50]
     data_arrays_0_3.rdata_MPORT.mask <= bits(io_req_bits_eccMask, 3, 3) @[DCache.scala 50:82]
 
   module DCacheModuleImpl_Anon_2 :
@@ -5283,20 +5171,13 @@ circuit RocketTile :
     node _T_20 = not(refill_valid) @[ICache.scala 473:9]
     node _GEN_38 = or(refill_fire, refill_valid) @[ICache.scala 474:22 178:29 474:37]
     node _GEN_39 = mux(refill_done, UInt<1>("h0"), _GEN_38) @[ICache.scala 475:{22,37}]
+    node _GEN_42 = mux(reset, UInt<128>("h0"), _GEN_17) @[ICache.scala 231:{21,21}]
     auto_master_out_a_valid <= and(s2_miss, s2_request_refill_REG) @[ICache.scala 184:35]
     auto_master_out_a_bits_address <= shl(_io_errors_bus_bits_T, 6) @[ICache.scala 418:64]
     io_req_ready <= not(refill_one_beat) @[ICache.scala 191:19]
     io_resp_valid <= and(s2_valid, s2_hit) @[ICache.scala 336:33]
     io_resp_bits_data <= s2_dout_0 @[ICache.scala 333:25]
     io_resp_bits_ae <= s2_tl_error @[ICache.scala 334:23]
-    s1_valid <= mux(reset, UInt<1>("h0"), s0_valid) @[ICache.scala 169:{21,21} 192:12]
-    s2_valid <= mux(reset, UInt<1>("h0"), _s2_valid_T_1) @[ICache.scala 174:{25,25,25}]
-    s2_hit <= and(s1_vb, _tagMatch_T) @[ICache.scala 262:26]
-    invalidated <= mux(_T_20, UInt<1>("h0"), _GEN_18) @[ICache.scala 473:{24,38}]
-    refill_valid <= mux(reset, UInt<1>("h0"), _GEN_39) @[ICache.scala 178:{29,29}]
-    s2_request_refill_REG <= not(_s1_can_request_refill_T) @[ICache.scala 183:31]
-    refill_paddr <= mux(_refill_paddr_T, io_s1_paddr, refill_paddr) @[Reg.scala 15:16 16:{19,23}]
-    counter <= mux(reset, UInt<10>("h0"), _GEN_3) @[Edges.scala 228:{27,27}]
     tag_array_0.tag_rdata.addr <= bits(io_req_bits_addr, 11, 6) @[ICache.scala 218:42]
     tag_array_0.tag_rdata.en <= and(_tag_rdata_T_1, s0_valid) @[ICache.scala 218:83]
     tag_array_0.tag_rdata.clk <= clock @[ICache.scala 218:{33,33}]
@@ -5305,9 +5186,6 @@ circuit RocketTile :
     tag_array_0.MPORT.clk <= clock @[ICache.scala 221:22]
     tag_array_0.MPORT.data <= cat(refillError, refill_tag) @[Cat.scala 30:58]
     tag_array_0.MPORT.mask <= UInt<1>("h1")
-    accruedRefillError <= mux(refill_one_beat, refillError, accruedRefillError) @[ICache.scala 232:26 233:24 219:31]
-    node _GEN_42 = mux(reset, UInt<128>("h0"), _GEN_17) @[ICache.scala 231:{21,21}]
-    vb_array <= bits(_GEN_42, 63, 0) @[ICache.scala 231:{21,21}]
     data_arrays_0_0.dout.addr <= mux(refill_one_beat, _mem_idx_T_1, _mem_idx_T_3) @[ICache.scala 286:22]
     data_arrays_0_0.dout.en <= and(_dout_T, s0_valid) @[ICache.scala 295:46]
     data_arrays_0_0.dout.clk <= clock @[ICache.scala 295:{31,31}]
@@ -5316,6 +5194,16 @@ circuit RocketTile :
     data_arrays_0_0.MPORT_1.clk <= clock @[ICache.scala 290:16]
     data_arrays_0_0.MPORT_1.data <= auto_master_out_d_bits_data @[ICache.scala 291:21]
     data_arrays_0_0.MPORT_1.mask <= UInt<1>("h1")
+    s1_valid <= mux(reset, UInt<1>("h0"), s0_valid) @[ICache.scala 169:{21,21} 192:12]
+    vb_array <= bits(_GEN_42, 63, 0) @[ICache.scala 231:{21,21}]
+    s2_valid <= mux(reset, UInt<1>("h0"), _s2_valid_T_1) @[ICache.scala 174:{25,25,25}]
+    s2_hit <= and(s1_vb, _tagMatch_T) @[ICache.scala 262:26]
+    invalidated <= mux(_T_20, UInt<1>("h0"), _GEN_18) @[ICache.scala 473:{24,38}]
+    refill_valid <= mux(reset, UInt<1>("h0"), _GEN_39) @[ICache.scala 178:{29,29}]
+    s2_request_refill_REG <= not(_s1_can_request_refill_T) @[ICache.scala 183:31]
+    refill_paddr <= mux(_refill_paddr_T, io_s1_paddr, refill_paddr) @[Reg.scala 15:16 16:{19,23}]
+    counter <= mux(reset, UInt<10>("h0"), _GEN_3) @[Edges.scala 228:{27,27}]
+    accruedRefillError <= mux(refill_one_beat, refillError, accruedRefillError) @[ICache.scala 232:26 233:24 219:31]
     s2_dout_0 <= mux(s1_valid, s1_dout_0, s2_dout_0) @[Reg.scala 15:16 16:{19,23}]
     s2_tl_error <= mux(s1_valid, _s2_tl_error_T, s2_tl_error) @[Reg.scala 15:16 16:{19,23}]
 
@@ -5894,6 +5782,7 @@ circuit RocketTile :
     node _io_inst_0_valid_T_1 = bits(valid, 0, 0) @[IBuf.scala 94:32]
     node _io_inst_0_bits_xcpt1_T_4 = cat(UInt<1>("h0"), xcpt_1_ae_inst) @[IBuf.scala 96:63]
     node _io_inst_0_bits_xcpt1_T_5 = mux(exp.io_rvc, UInt<2>("h0"), _io_inst_0_bits_xcpt1_T_4) @[IBuf.scala 96:35]
+    node _GEN_70 = mux(reset, UInt<2>("h0"), _GEN_46) @[IBuf.scala 34:{47,47}]
     io_imem_ready <= and(_io_imem_ready_T_1, _io_imem_ready_T_6) @[IBuf.scala 44:60]
     io_pc <= mux(_io_pc_T, buf__pc, io_imem_bits_pc) @[IBuf.scala 82:15]
     io_inst_0_valid <= and(_io_inst_0_valid_T_1, full_insn) @[IBuf.scala 94:36]
@@ -5907,13 +5796,12 @@ circuit RocketTile :
     io_inst_0_bits_inst_rs1 <= exp.io_out_rs1 @[IBuf.scala 88:26]
     io_inst_0_bits_inst_rs2 <= exp.io_out_rs2 @[IBuf.scala 88:26]
     io_inst_0_bits_raw <= or(_inst_T, _inst_T_2) @[IBuf.scala 72:30]
-    node _GEN_70 = mux(reset, UInt<2>("h0"), _GEN_46) @[IBuf.scala 34:{47,47}]
+    exp.io_in <= or(_inst_T, _inst_T_2) @[IBuf.scala 72:30]
     nBufValid <= bits(_GEN_70, 0, 0) @[IBuf.scala 34:{47,47}]
     buf__pc <= mux(io_inst_0_ready, _GEN_9, buf__pc) @[IBuf.scala 35:16 47:29]
     buf__data <= mux(io_inst_0_ready, _GEN_10, buf__data) @[IBuf.scala 35:16 47:29]
     buf__xcpt_ae_inst <= mux(io_inst_0_ready, _GEN_13, buf__xcpt_ae_inst) @[IBuf.scala 35:16 47:29]
     buf__replay <= mux(io_inst_0_ready, _GEN_14, buf__replay) @[IBuf.scala 35:16 47:29]
-    exp.io_in <= or(_inst_T, _inst_T_2) @[IBuf.scala 72:30]
 
   module CSRFile :
     input clock : Clock
@@ -6045,11 +5933,7 @@ circuit RocketTile :
     output io_trace_0_valid : UInt<1>
     output io_trace_0_iaddr : UInt<32>
     output io_trace_0_insn : UInt<32>
-    output io_trace_0_priv : UInt<3>
     output io_trace_0_exception : UInt<1>
-    output io_trace_0_interrupt : UInt<1>
-    output io_trace_0_cause : UInt<32>
-    output io_trace_0_tval : UInt<32>
     output io_customCSRs_0_value : UInt<32>
 
     reg reg_mstatus_spp : UInt<1>, clock with :
@@ -7312,6 +7196,10 @@ circuit RocketTile :
     node _GEN_446 = mux(csr_wen, _GEN_330, pad(reg_pmp_7_addr, 32)) @[CSR.scala 897:18 379:20]
     node _GEN_447 = mux(csr_wen, _GEN_331, reg_custom_0) @[CSR.scala 897:18 628:43]
     node _io_trace_0_valid_T = gt(io_retire, UInt<1>("h0")) @[CSR.scala 1162:26]
+    node _GEN_509 = mux(reset, UInt<2>("h0"), _GEN_132) @[CSR.scala 319:{24,24}]
+    node _GEN_510 = mux(reset, UInt<32>("h0"), _GEN_349) @[CSR.scala 436:{34,34}]
+    node _GEN_511 = mux(reset, UInt<64>("h0"), _GEN_352) @[Counters.scala 45:{37,37}]
+    node _GEN_512 = mux(reset, UInt<64>("h0"), _GEN_350) @[Counters.scala 45:{37,37}]
     io_rw_rdata <= bits(_io_rw_rdata_T_264, 31, 0) @[CSR.scala 855:15]
     io_decode_0_fp_illegal <= or(_io_decode_0_fp_illegal_T, _io_decode_0_fp_illegal_T_2) @[CSR.scala 667:45]
     io_decode_0_fp_csr <= UInt<1>("h0") @[CSR.scala 669:19]
@@ -7423,13 +7311,8 @@ circuit RocketTile :
     io_trace_0_valid <= or(_io_trace_0_valid_T, io_trace_0_exception) @[CSR.scala 1162:30]
     io_trace_0_iaddr <= io_pc @[CSR.scala 1164:13]
     io_trace_0_insn <= io_inst_0 @[CSR.scala 1163:12]
-    io_trace_0_priv <= cat(reg_debug, UInt<2>("h3")) @[Cat.scala 30:58]
     io_trace_0_exception <= or(_io_eret_T, io_exception) @[CSR.scala 738:43]
-    io_trace_0_interrupt <= bits(cause, 31, 31) @[CSR.scala 1167:25]
-    io_trace_0_cause <= mux(insn_call, UInt<32>("hb"), _cause_T_2) @[CSR.scala 688:8]
-    io_trace_0_tval <= io_tval @[CSR.scala 1168:12]
     io_customCSRs_0_value <= reg_custom_0 @[CSR.scala 852:14]
-    node _GEN_509 = mux(reset, UInt<2>("h0"), _GEN_132) @[CSR.scala 319:{24,24}]
     reg_mstatus_spp <= bits(_GEN_509, 0, 0) @[CSR.scala 319:{24,24}]
     reg_mstatus_mpie <= mux(reset, UInt<1>("h0"), _GEN_340) @[CSR.scala 319:{24,24}]
     reg_mstatus_mie <= mux(reset, UInt<1>("h0"), _GEN_339) @[CSR.scala 319:{24,24}]
@@ -7502,12 +7385,9 @@ circuit RocketTile :
     reg_mscratch <= mux(csr_wen, _GEN_191, reg_mscratch) @[CSR.scala 897:18 394:25]
     reg_mtvec <= mux(reset, UInt<32>("h0"), _GEN_346) @[CSR.scala 397:{27,27}]
     reg_wfi <= mux(reset, UInt<1>("h0"), _GEN_47) @[CSR.scala 427:{50,50}]
-    node _GEN_510 = mux(reset, UInt<32>("h0"), _GEN_349) @[CSR.scala 436:{34,34}]
     reg_mcountinhibit <= bits(_GEN_510, 2, 0) @[CSR.scala 436:{34,34}]
-    node _GEN_511 = mux(reset, UInt<64>("h0"), _GEN_352) @[Counters.scala 45:{37,37}]
     value_lo <= bits(_GEN_511, 5, 0) @[Counters.scala 45:{37,37}]
     value_hi <= mux(reset, UInt<58>("h0"), _GEN_353) @[Counters.scala 50:{27,27}]
-    node _GEN_512 = mux(reset, UInt<64>("h0"), _GEN_350) @[Counters.scala 45:{37,37}]
     value_lo_1 <= bits(_GEN_512, 5, 0) @[Counters.scala 45:{37,37}]
     value_hi_1 <= mux(reset, UInt<58>("h0"), _GEN_351) @[Counters.scala 50:{27,27}]
     reg_misa <= mux(reset, UInt<32>("h40801105"), _GEN_342) @[CSR.scala 490:{21,21}]
@@ -8239,8 +8119,6 @@ circuit RocketTile :
     node io_out_s_hi_30 = cat(io_out_s_hi_hi_28, UInt<3>("h0")) @[Cat.scala 30:58]
     node io_out_s_res_bits = cat(io_out_s_hi_30, io_out_s_lo_68) @[Cat.scala 30:58]
     node io_out_s_11_bits = mux(_io_out_s_T_80, io_out_s_res_bits, io_out_s_me_bits) @[RVC.scala 92:10]
-    node io_out_s_11_rd = mux(_io_out_s_T_80, io_out_s_hi_hi_lo_8, io_out_s_hi_hi_lo_8) @[RVC.scala 92:10]
-    node io_out_s_11_rs2 = mux(_io_out_s_T_80, io_out_s_lo_hi_1, io_out_s_lo_hi_1) @[RVC.scala 92:10]
     node io_out_s_hi_hi_hi_18 = cat(_io_out_s_T_47, io_out_s_lo_55) @[Cat.scala 30:58]
     node io_out_s_lo_73 = cat(io_out_s_hi_hi_lo_1, UInt<7>("h13")) @[Cat.scala 30:58]
     node io_out_s_hi_hi_29 = cat(io_out_s_hi_hi_hi_18, io_out_s_hi_hi_lo_1) @[Cat.scala 30:58]
@@ -8344,7 +8222,6 @@ circuit RocketTile :
     node io_out_s_jr_mv_bits = mux(_io_out_s_jr_mv_T_1, io_out_s_mv_bits, io_out_s_jr_reserved_bits) @[RVC.scala 135:22]
     node io_out_s_jr_mv_rd = mux(_io_out_s_jr_mv_T_1, io_out_s_hi_hi_lo_8, UInt<5>("h0")) @[RVC.scala 135:22]
     node io_out_s_jr_mv_rs1 = mux(_io_out_s_jr_mv_T_1, UInt<5>("h0"), io_out_s_hi_hi_lo_8) @[RVC.scala 135:22]
-    node io_out_s_jr_mv_rs2 = mux(_io_out_s_jr_mv_T_1, io_out_s_lo_55, io_out_s_lo_55) @[RVC.scala 135:22]
     node io_out_s_jalr = cat(io_out_s_add_hi, UInt<12>("he7")) @[Cat.scala 30:58]
     node _io_out_s_ebreak_T = cat(io_out_s_reserved_hi, UInt<7>("h73")) @[Cat.scala 30:58]
     node io_out_s_ebreak = or(_io_out_s_ebreak_T, UInt<25>("h100000")) @[RVC.scala 137:46]
@@ -8353,11 +8230,9 @@ circuit RocketTile :
     node io_out_s_jalr_ebreak_bits = pad(_io_out_s_jalr_ebreak_T_2, 32) @[RVC.scala 21:19 22:14]
     node io_out_s_jalr_add_bits = mux(_io_out_s_jr_mv_T_1, io_out_s_add_bits, io_out_s_jalr_ebreak_bits) @[RVC.scala 139:25]
     node io_out_s_jalr_add_rd = mux(_io_out_s_jr_mv_T_1, io_out_s_hi_hi_lo_8, UInt<5>("h1")) @[RVC.scala 139:25]
-    node io_out_s_jalr_add_rs1 = mux(_io_out_s_jr_mv_T_1, io_out_s_hi_hi_lo_8, io_out_s_hi_hi_lo_8) @[RVC.scala 139:25]
     node io_out_s_20_bits = mux(_io_out_s_T_47, io_out_s_jalr_add_bits, io_out_s_jr_mv_bits) @[RVC.scala 140:10]
     node io_out_s_20_rd = mux(_io_out_s_T_47, io_out_s_jalr_add_rd, io_out_s_jr_mv_rd) @[RVC.scala 140:10]
-    node io_out_s_20_rs1 = mux(_io_out_s_T_47, io_out_s_jalr_add_rs1, io_out_s_jr_mv_rs1) @[RVC.scala 140:10]
-    node io_out_s_20_rs2 = mux(_io_out_s_T_47, io_out_s_jr_mv_rs2, io_out_s_jr_mv_rs2) @[RVC.scala 140:10]
+    node io_out_s_20_rs1 = mux(_io_out_s_T_47, io_out_s_hi_hi_lo_8, io_out_s_jr_mv_rs1) @[RVC.scala 140:10]
     node io_out_s_hi_61 = cat(io_out_s_lo_5, io_out_s_hi_lo_1) @[Cat.scala 30:58]
     node _io_out_s_T_172 = cat(io_out_s_hi_61, UInt<3>("h0")) @[Cat.scala 30:58]
     node io_out_s_hi_hi_hi_41 = shr(_io_out_s_T_172, 5) @[RVC.scala 124:34]
@@ -8388,73 +8263,60 @@ circuit RocketTile :
     node io_out_s_1_bits = pad(_io_out_s_T_4, 32) @[RVC.scala 21:19 22:14]
     node io_out_s_0_bits = pad(_io_out_s_T, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_2_bits = mux(_io_out_T_1, io_out_s_1_bits, io_out_s_0_bits) @[package.scala 32:76]
-    node _io_out_T_2_rd = mux(_io_out_T_1, io_out_s_lo_hi_1, io_out_s_lo_hi_1) @[package.scala 32:76]
     node _io_out_T_2_rs1 = mux(_io_out_T_1, io_out_s_hi_hi_lo_1, UInt<5>("h2")) @[package.scala 32:76]
     node _io_out_T_3 = eq(_io_out_T, UInt<5>("h2")) @[package.scala 32:86]
     node io_out_s_2_bits = pad(_io_out_s_T_9, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_4_bits = mux(_io_out_T_3, io_out_s_2_bits, _io_out_T_2_bits) @[package.scala 32:76]
-    node _io_out_T_4_rd = mux(_io_out_T_3, io_out_s_lo_hi_1, _io_out_T_2_rd) @[package.scala 32:76]
     node _io_out_T_4_rs1 = mux(_io_out_T_3, io_out_s_hi_hi_lo_1, _io_out_T_2_rs1) @[package.scala 32:76]
     node _io_out_T_5 = eq(_io_out_T, UInt<5>("h3")) @[package.scala 32:86]
     node io_out_s_3_bits = pad(_io_out_s_T_14, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_6_bits = mux(_io_out_T_5, io_out_s_3_bits, _io_out_T_4_bits) @[package.scala 32:76]
-    node _io_out_T_6_rd = mux(_io_out_T_5, io_out_s_lo_hi_1, _io_out_T_4_rd) @[package.scala 32:76]
     node _io_out_T_6_rs1 = mux(_io_out_T_5, io_out_s_hi_hi_lo_1, _io_out_T_4_rs1) @[package.scala 32:76]
     node _io_out_T_7 = eq(_io_out_T, UInt<5>("h4")) @[package.scala 32:86]
     node io_out_s_4_bits = pad(_io_out_s_T_21, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_8_bits = mux(_io_out_T_7, io_out_s_4_bits, _io_out_T_6_bits) @[package.scala 32:76]
-    node _io_out_T_8_rd = mux(_io_out_T_7, io_out_s_lo_hi_1, _io_out_T_6_rd) @[package.scala 32:76]
     node _io_out_T_8_rs1 = mux(_io_out_T_7, io_out_s_hi_hi_lo_1, _io_out_T_6_rs1) @[package.scala 32:76]
     node _io_out_T_9 = eq(_io_out_T, UInt<5>("h5")) @[package.scala 32:86]
     node io_out_s_5_bits = pad(_io_out_s_T_28, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_10_bits = mux(_io_out_T_9, io_out_s_5_bits, _io_out_T_8_bits) @[package.scala 32:76]
-    node _io_out_T_10_rd = mux(_io_out_T_9, io_out_s_lo_hi_1, _io_out_T_8_rd) @[package.scala 32:76]
     node _io_out_T_10_rs1 = mux(_io_out_T_9, io_out_s_hi_hi_lo_1, _io_out_T_8_rs1) @[package.scala 32:76]
     node _io_out_T_11 = eq(_io_out_T, UInt<5>("h6")) @[package.scala 32:86]
     node io_out_s_6_bits = pad(_io_out_s_T_35, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_12_bits = mux(_io_out_T_11, io_out_s_6_bits, _io_out_T_10_bits) @[package.scala 32:76]
-    node _io_out_T_12_rd = mux(_io_out_T_11, io_out_s_lo_hi_1, _io_out_T_10_rd) @[package.scala 32:76]
     node _io_out_T_12_rs1 = mux(_io_out_T_11, io_out_s_hi_hi_lo_1, _io_out_T_10_rs1) @[package.scala 32:76]
     node _io_out_T_13 = eq(_io_out_T, UInt<5>("h7")) @[package.scala 32:86]
     node io_out_s_7_bits = pad(_io_out_s_T_42, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_14_bits = mux(_io_out_T_13, io_out_s_7_bits, _io_out_T_12_bits) @[package.scala 32:76]
-    node _io_out_T_14_rd = mux(_io_out_T_13, io_out_s_lo_hi_1, _io_out_T_12_rd) @[package.scala 32:76]
     node _io_out_T_14_rs1 = mux(_io_out_T_13, io_out_s_hi_hi_lo_1, _io_out_T_12_rs1) @[package.scala 32:76]
     node _io_out_T_15 = eq(_io_out_T, UInt<5>("h8")) @[package.scala 32:86]
     node _io_out_T_16_bits = mux(_io_out_T_15, io_out_s_8_bits, _io_out_T_14_bits) @[package.scala 32:76]
-    node _io_out_T_16_rd = mux(_io_out_T_15, io_out_s_hi_hi_lo_8, _io_out_T_14_rd) @[package.scala 32:76]
+    node _io_out_T_16_rd = mux(_io_out_T_15, io_out_s_hi_hi_lo_8, io_out_s_lo_hi_1) @[package.scala 32:76]
     node _io_out_T_16_rs1 = mux(_io_out_T_15, io_out_s_hi_hi_lo_8, _io_out_T_14_rs1) @[package.scala 32:76]
-    node _io_out_T_16_rs2 = mux(_io_out_T_15, io_out_s_lo_hi_1, _io_out_T_14_rd) @[package.scala 32:76]
     node _io_out_T_17 = eq(_io_out_T, UInt<5>("h9")) @[package.scala 32:86]
     node _io_out_T_18_bits = mux(_io_out_T_17, io_out_s_9_bits, _io_out_T_16_bits) @[package.scala 32:76]
     node _io_out_T_18_rd = mux(_io_out_T_17, UInt<5>("h1"), _io_out_T_16_rd) @[package.scala 32:76]
     node _io_out_T_18_rs1 = mux(_io_out_T_17, io_out_s_hi_hi_lo_8, _io_out_T_16_rs1) @[package.scala 32:76]
-    node _io_out_T_18_rs2 = mux(_io_out_T_17, io_out_s_lo_hi_1, _io_out_T_16_rs2) @[package.scala 32:76]
     node _io_out_T_19 = eq(_io_out_T, UInt<5>("ha")) @[package.scala 32:86]
     node _io_out_T_20_bits = mux(_io_out_T_19, io_out_s_10_bits, _io_out_T_18_bits) @[package.scala 32:76]
     node _io_out_T_20_rd = mux(_io_out_T_19, io_out_s_hi_hi_lo_8, _io_out_T_18_rd) @[package.scala 32:76]
     node _io_out_T_20_rs1 = mux(_io_out_T_19, UInt<5>("h0"), _io_out_T_18_rs1) @[package.scala 32:76]
-    node _io_out_T_20_rs2 = mux(_io_out_T_19, io_out_s_lo_hi_1, _io_out_T_18_rs2) @[package.scala 32:76]
     node _io_out_T_21 = eq(_io_out_T, UInt<5>("hb")) @[package.scala 32:86]
     node _io_out_T_22_bits = mux(_io_out_T_21, io_out_s_11_bits, _io_out_T_20_bits) @[package.scala 32:76]
-    node _io_out_T_22_rd = mux(_io_out_T_21, io_out_s_11_rd, _io_out_T_20_rd) @[package.scala 32:76]
-    node _io_out_T_22_rs1 = mux(_io_out_T_21, io_out_s_11_rd, _io_out_T_20_rs1) @[package.scala 32:76]
-    node _io_out_T_22_rs2 = mux(_io_out_T_21, io_out_s_11_rs2, _io_out_T_20_rs2) @[package.scala 32:76]
+    node _io_out_T_22_rd = mux(_io_out_T_21, io_out_s_hi_hi_lo_8, _io_out_T_20_rd) @[package.scala 32:76]
+    node _io_out_T_22_rs1 = mux(_io_out_T_21, io_out_s_hi_hi_lo_8, _io_out_T_20_rs1) @[package.scala 32:76]
     node _io_out_T_23 = eq(_io_out_T, UInt<5>("hc")) @[package.scala 32:86]
     node _io_out_T_24_bits = mux(_io_out_T_23, io_out_s_12_bits, _io_out_T_22_bits) @[package.scala 32:76]
     node _io_out_T_24_rd = mux(_io_out_T_23, io_out_s_hi_hi_lo_1, _io_out_T_22_rd) @[package.scala 32:76]
     node _io_out_T_24_rs1 = mux(_io_out_T_23, io_out_s_hi_hi_lo_1, _io_out_T_22_rs1) @[package.scala 32:76]
-    node _io_out_T_24_rs2 = mux(_io_out_T_23, io_out_s_lo_hi_1, _io_out_T_22_rs2) @[package.scala 32:76]
     node _io_out_T_25 = eq(_io_out_T, UInt<5>("hd")) @[package.scala 32:86]
     node _io_out_T_26_bits = mux(_io_out_T_25, io_out_s_13_bits, _io_out_T_24_bits) @[package.scala 32:76]
     node _io_out_T_26_rd = mux(_io_out_T_25, UInt<5>("h0"), _io_out_T_24_rd) @[package.scala 32:76]
     node _io_out_T_26_rs1 = mux(_io_out_T_25, io_out_s_hi_hi_lo_1, _io_out_T_24_rs1) @[package.scala 32:76]
-    node _io_out_T_26_rs2 = mux(_io_out_T_25, io_out_s_lo_hi_1, _io_out_T_24_rs2) @[package.scala 32:76]
     node _io_out_T_27 = eq(_io_out_T, UInt<5>("he")) @[package.scala 32:86]
     node _io_out_T_28_bits = mux(_io_out_T_27, io_out_s_14_bits, _io_out_T_26_bits) @[package.scala 32:76]
     node _io_out_T_28_rd = mux(_io_out_T_27, io_out_s_hi_hi_lo_1, _io_out_T_26_rd) @[package.scala 32:76]
     node _io_out_T_28_rs1 = mux(_io_out_T_27, io_out_s_hi_hi_lo_1, _io_out_T_26_rs1) @[package.scala 32:76]
-    node _io_out_T_28_rs2 = mux(_io_out_T_27, UInt<5>("h0"), _io_out_T_26_rs2) @[package.scala 32:76]
+    node _io_out_T_28_rs2 = mux(_io_out_T_27, UInt<5>("h0"), io_out_s_lo_hi_1) @[package.scala 32:76]
     node _io_out_T_29 = eq(_io_out_T, UInt<5>("hf")) @[package.scala 32:86]
     node _io_out_T_30_bits = mux(_io_out_T_29, io_out_s_15_bits, _io_out_T_28_bits) @[package.scala 32:76]
     node _io_out_T_30_rd = mux(_io_out_T_29, UInt<5>("h0"), _io_out_T_28_rd) @[package.scala 32:76]
@@ -8488,7 +8350,7 @@ circuit RocketTile :
     node _io_out_T_40_bits = mux(_io_out_T_39, io_out_s_20_bits, _io_out_T_38_bits) @[package.scala 32:76]
     node _io_out_T_40_rd = mux(_io_out_T_39, io_out_s_20_rd, _io_out_T_38_rd) @[package.scala 32:76]
     node _io_out_T_40_rs1 = mux(_io_out_T_39, io_out_s_20_rs1, _io_out_T_38_rs1) @[package.scala 32:76]
-    node _io_out_T_40_rs2 = mux(_io_out_T_39, io_out_s_20_rs2, _io_out_T_38_rs2) @[package.scala 32:76]
+    node _io_out_T_40_rs2 = mux(_io_out_T_39, io_out_s_lo_55, _io_out_T_38_rs2) @[package.scala 32:76]
     node _io_out_T_41 = eq(_io_out_T, UInt<5>("h15")) @[package.scala 32:86]
     node io_out_s_21_bits = pad(_io_out_s_T_174, 32) @[RVC.scala 21:19 22:14]
     node _io_out_T_42_bits = mux(_io_out_T_41, io_out_s_21_bits, _io_out_T_40_bits) @[package.scala 32:76]
@@ -8548,4 +8410,3 @@ circuit RocketTile :
     io_out_rs1 <= mux(_io_out_T_61, io_out_s_24_rs1, _io_out_T_60_rs1) @[package.scala 32:76]
     io_out_rs2 <= mux(_io_out_T_61, io_out_s_24_rs2, _io_out_T_60_rs2) @[package.scala 32:76]
     io_rvc <= neq(_io_rvc_T, UInt<2>("h3")) @[RVC.scala 163:26]
-
