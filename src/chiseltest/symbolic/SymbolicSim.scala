@@ -17,12 +17,11 @@ import maltese.smt
 import java.io.File
 import scala.collection.mutable
 
-
 class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAsserts: Boolean, seed: Long = 0) {
   private val rand = new scala.util.Random(seed)
 
   // we do not support assumptions at the moment
-  private val assumptions =  sys.signals.filter(_.lbl == IsConstraint)
+  private val assumptions = sys.signals.filter(_.lbl == IsConstraint)
   require(assumptions.isEmpty, "Assumptions are currently not supported!")
 
   // we need to assertion names if we want to check them
@@ -43,7 +42,7 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
 
   def step(n: Int): Unit = {
     require(n > 0)
-    (0 until n).foreach{ _ => step() }
+    (0 until n).foreach { _ => step() }
   }
 
   def step(): Unit = {
@@ -82,13 +81,13 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
   def poke(signal: String, value: BigInt): Unit = {
     val name = resolveSignal(signal)
     val vs = engine.set(name, cycleCount, value)
-    if(isInput(name)) { inputAssignments(name) = vs }
+    if (isInput(name)) { inputAssignments(name) = vs }
   }
 
   def poke(signal: String, value: smt.SMTExpr): Unit = {
     val name = resolveSignal(signal)
     val vs = engine.set(name, cycleCount, value)
-    if(isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
+    if (isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
   }
 
   def pokeMemory(signal: String, index: BigInt, value: BigInt): Unit = {
@@ -101,7 +100,7 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     val name = resolveSignal(signal)
     val vs = Value.getValueSummary(value)
     engine.set(name, cycleCount, vs)
-    if(isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
+    if (isInput(name)) { inputAssignments(name) = vs.asInstanceOf[BVValueSummary] }
   }
 
   def makeSymbol(name: String, width: Int): Value = {
@@ -113,13 +112,13 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     sys.states.foreach {
       case s @ mc.State(sym: smt.BVSymbol, _, _) =>
         val value = BigInt(sym.width, rand)
-        if(s.init.isEmpty || !skipInitialized) {
+        if (s.init.isEmpty || !skipInitialized) {
           poke(sym.name, value)
         }
       case s @ mc.State(sym: smt.ArraySymbol, _, _) =>
         val value = BigInt(sym.dataWidth, rand)
         val array = smt.ArrayConstant(smt.BVLiteral(value, sym.dataWidth), sym.indexWidth)
-        if(s.init.isEmpty || !skipInitialized) {
+        if (s.init.isEmpty || !skipInitialized) {
           poke(sym.name, array)
         }
     }
@@ -143,8 +142,8 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
 
   def assert(v: Value, msg: => String = ""): Unit = {
     val vs = Value.getValueSummary(v).asInstanceOf[BVValueSummary]
-    if(vs.isSat) {
-      if(vs.isConcrete) {
+    if (vs.isSat) {
+      if (vs.isConcrete) {
         throw new RuntimeException(s"Assertion always fails! $msg")
       } else {
         throw new RuntimeException(s"Assertion may fail! $msg")
@@ -152,13 +151,12 @@ class SymbolicSim(sys: TransitionSystem, renames: Map[String, String], ignoreAss
     }
   }
 
-  private def doCheckAsserts(): Unit = if(!ignoreAsserts) {
-    assertions.foreach{ a =>
+  private def doCheckAsserts(): Unit = if (!ignoreAsserts) {
+    assertions.foreach { a =>
       assert(peek(a), s"$a in cycle $cycleCount")
     }
   }
 }
-
 
 class Value(private val e: ValueSummary) {
   def isSymbolic: Boolean = e.isSymbolic
@@ -167,14 +165,14 @@ class Value(private val e: ValueSummary) {
     case b: BVValueSummary =>
       b.value match {
         case Some(v) => v
-        case None => throw new RuntimeException(s"Value is symbolic: ${b.symbolic}")
+        case None    => throw new RuntimeException(s"Value is symbolic: ${b.symbolic}")
       }
     case _ =>
       throw new RuntimeException("Value is an array!")
   }
 
   def getSMT: smt.SMTExpr = e match {
-    case b: BVValueSummary => b.symbolic
+    case b: BVValueSummary    => b.symbolic
     case a: ArrayValueSummary => a.symbolic
   }
 
@@ -183,7 +181,7 @@ class Value(private val e: ValueSummary) {
     case b: BVValueSummary =>
       b.value match {
         case Some(value) => "Value(" + value + ")"
-        case None => "Value(" + b.toString + ")"
+        case None        => "Value(" + b.toString + ")"
       }
   }
 }
@@ -191,7 +189,6 @@ class Value(private val e: ValueSummary) {
 private object Value {
   def getValueSummary(v: Value): ValueSummary = v.e
 }
-
 
 object SymbolicSim {
   def loadBtor(filename: String): SymbolicSim = loadBtor(filename, false)
@@ -206,13 +203,16 @@ object SymbolicSim {
   def loadBtor(src: String, name: String, ignoreAsserts: Boolean): SymbolicSim = {
     val sys = mc.Btor2.read(src = src, defaultName = name)
     val simplified = simplifySystem(sys)
-    if(verbose) { println(simplified.serialize) }
+    if (verbose) { println(simplified.serialize) }
     new SymbolicSim(simplified, renames = Map(), ignoreAsserts = ignoreAsserts)
   }
 
   private lazy val firrtlCompiler = new FirrtlStage
   private def firrtlCompilerSource(src: String) = Seq(FirrtlSourceAnnotation(src))
-  private val flattenPass = Seq(RunFirrtlTransformAnnotation(Dependency(FlattenPass)), RunFirrtlTransformAnnotation(Dependency[InlineInstances]))
+  private val flattenPass = Seq(
+    RunFirrtlTransformAnnotation(Dependency(FlattenPass)),
+    RunFirrtlTransformAnnotation(Dependency[InlineInstances])
+  )
   private val convertFileInit = Seq(RunFirrtlTransformAnnotation(Dependency(MemoryFileInitPass)))
 
   def loadFirrtl(src: String): SymbolicSim = loadFirrtl(src, List(), false)
@@ -228,7 +228,7 @@ object SymbolicSim {
     val renames = FlattenPass.getRenames(r)
     val sysWithNextInitNodes = CreateInitAndNextSignals.run(sys)
     val simplified = sysWithNextInitNodes // simplifySystem(sys)
-    if(verbose) { println(simplified.serialize) }
+    if (verbose) { println(simplified.serialize) }
     // save system
     val sysFile = os.pwd / (sys.name + ".sys")
     os.write.over(sysFile, sys.serialize + "\n")
@@ -238,7 +238,7 @@ object SymbolicSim {
   def loadFirrtlFile(filename: String, annoFile: String): SymbolicSim = loadFirrtlFile(filename, annoFile, false)
   def loadFirrtlFile(filename: String, annoFile: String, ignoreAsserts: Boolean): SymbolicSim = {
     val in = FirrtlFileAnnotation(filename)
-    val inAnnos = if(annoFile.isEmpty) List() else List(InputAnnotationFileAnnotation(annoFile))
+    val inAnnos = if (annoFile.isEmpty) List() else List(InputAnnotationFileAnnotation(annoFile))
     loadFirrtl(Seq(in) ++ inAnnos, ignoreAsserts)
   }
 
@@ -251,11 +251,9 @@ object SymbolicSim {
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
-
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
-
-    Simplify,
+    Simplify
   )
 }

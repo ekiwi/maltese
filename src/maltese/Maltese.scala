@@ -6,12 +6,12 @@ package maltese
 
 import java.io.File
 
-import maltese.sym.{SymEngine, Options}
+import maltese.sym.{Options, SymEngine}
 import maltese.passes._
 import maltese.mc.{IsBad, IsConstraint, TransitionSystem}
 
 object MalteseApp extends App {
-  if(args.length < 1) {
+  if (args.length < 1) {
     // println(s"please provide the name of a btor file")
     val d = "benchmarks/hwmcc19/bv/goel/crafted/toy_lock_4.btor2"
     //val d = "benchmarks/hwmcc19/bv/goel/crafted/cal10.btor2"
@@ -27,12 +27,10 @@ object Maltese {
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
-
     Simplify,
     new Inline,
     new DeadCodeElimination(removeUnusedInputs = true),
-
-    Simplify,
+    Simplify
 
     // PrintSystem,
   )
@@ -69,15 +67,15 @@ object Maltese {
     e
   }
 
-
   def getConstraints(sys: TransitionSystem, doInit: Boolean): SymEngine = {
     val opts = Options.Default.copy(ImportBooleanExpressionsIntoGuard = true)
     val e = SymEngine(sys, !doInit, opts)
     val const = sys.signals.filter(_.lbl == IsConstraint).map(_.name)
-    const.take(105).zipWithIndex.foreach { case (c, i) =>
-      print(s"$i.")
-      val step = 0
-      val r = e.signalAt(c, step)
+    const.take(105).zipWithIndex.foreach {
+      case (c, i) =>
+        print(s"$i.")
+        val step = 0
+        val r = e.signalAt(c, step)
       /*val rString = r.toString
       if(rString.length < 200) {
         println(s"$c@$step: $rString")

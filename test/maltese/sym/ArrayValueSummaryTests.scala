@@ -9,7 +9,7 @@ import maltese.smt._
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ArrayValueSummaryTests extends AnyFlatSpec {
-  behavior of "ArrayValudSummary"
+  behavior.of("ArrayValudSummary")
   implicit val ctx: SymbolicContext = new SymbolicContext(Options.Default)
 
   it should "recognize that a constant array is concrete" in {
@@ -41,11 +41,13 @@ class ArrayValueSummaryTests extends AnyFlatSpec {
     //  since the array is concrete, we can access each index
     val value = vs.value.get
     (0 until (1 << 4)).foreach { ii =>
-      assert(value(ii) == (if(ii == 3) 100 else 123))
+      assert(value(ii) == (if (ii == 3) 100 else 123))
     }
 
     // or we can create a dense indexed sequence
-    assert(value.toIndexedSeq == IndexedSeq(123, 123, 123, 100, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123))
+    assert(
+      value.toIndexedSeq == IndexedSeq(123, 123, 123, 100, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123, 123)
+    )
 
     // or we can extract the default value + any changes
     assert(value.toMap._1 == 123)

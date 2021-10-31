@@ -8,7 +8,7 @@ import maltese.smt
 import org.scalatest.flatspec.AnyFlatSpec
 
 class Sodor1StageTests extends AnyFlatSpec {
-  behavior of "unpipelined sodor"
+  behavior.of("unpipelined sodor")
 
   it should "execute symbolically" in {
     val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor1Stage.fir", "", ignoreAsserts = true)
@@ -33,7 +33,7 @@ class Sodor1StageTests extends AnyFlatSpec {
 }
 
 class Sodor3StageTests extends AnyFlatSpec {
-  behavior of "sodor w/ 3 stages"
+  behavior.of("sodor w/ 3 stages")
 
   it should "execute symbolically" in {
     val sim = SymbolicSim.loadFirrtlFile("benchmarks/rfuzz/Sodor3Stage.fir", "", ignoreAsserts = true)
@@ -55,7 +55,7 @@ class Sodor3StageTests extends AnyFlatSpec {
     // sim.stepAndMonitor(4, List("core.frontend.if_reg_pc", "core.dpath.regfile"))
 
     // we wait until the register file changes
-    while(sim.peek("core.dpath.regfile").toString == "Value(regs)") {
+    while (sim.peek("core.dpath.regfile").toString == "Value(regs)") {
       sim.step()
     }
 

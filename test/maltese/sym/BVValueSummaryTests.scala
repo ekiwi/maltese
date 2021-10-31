@@ -43,8 +43,8 @@ class BVValueSummaryTests extends AnyFlatSpec {
     val four = BVValueSummary(4, 4)
     val five = BVValueSummary(5, 4)
 
-    assert(BVValueSummary.ite(tru,  four, five).isConcrete)
-    assert(BVValueSummary.ite(tru,  four, five).value.get == 4)
+    assert(BVValueSummary.ite(tru, four, five).isConcrete)
+    assert(BVValueSummary.ite(tru, four, five).value.get == 4)
     assert(BVValueSummary.ite(fals, four, five).isConcrete)
     assert(BVValueSummary.ite(fals, four, five).value.get == 5)
   }
@@ -75,10 +75,10 @@ class BVValueSummaryTests extends AnyFlatSpec {
       BVValueSummary.binary(a, b, BVAnd(_, _))
     }
 
-    assert(and( tru, fals).value.get == 0)
+    assert(and(tru, fals).value.get == 0)
     assert(and(fals, fals).value.get == 0)
-    assert(and(fals,  tru).value.get == 0)
-    assert(and( tru,  tru).value.get == 1)
+    assert(and(fals, tru).value.get == 0)
+    assert(and(tru, tru).value.get == 1)
 
     assertThrows[AssertionError] {
       and(tru, BVValueSummary(4, 4))
@@ -101,10 +101,10 @@ class BVValueSummaryTests extends AnyFlatSpec {
       BVValueSummary.binary(a, b, BVOr(_, _))
     }
 
-    assert(or( tru, fals).value.get == 1)
+    assert(or(tru, fals).value.get == 1)
     assert(or(fals, fals).value.get == 0)
-    assert(or(fals,  tru).value.get == 1)
-    assert(or( tru,  tru).value.get == 1)
+    assert(or(fals, tru).value.get == 1)
+    assert(or(tru, tru).value.get == 1)
 
     assertThrows[AssertionError] {
       or(tru, BVValueSummary(4, 4))

@@ -9,7 +9,7 @@ import maltese.smt.solvers.{Yices2, Yices2SMTLib, Z3SMTLib}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class RiscVMiniTest extends AnyFlatSpec {
-  behavior of "risc-v mini core"
+  behavior.of("risc-v mini core")
 
   it should "execute a symbolic add" in {
     val sim = SymbolicSim.loadFirrtlFile("benchmarks/riscv/riscv-mini/Core.fir")
@@ -30,7 +30,7 @@ class RiscVMiniTest extends AnyFlatSpec {
 
     // it takes 4 steps until the instruction is executed
     // we wait until the register file changes
-    while(sim.peek("dpath.regFile.regs").toString == "Value(regs)") {
+    while (sim.peek("dpath.regFile.regs").toString == "Value(regs)") {
       sim.step()
     }
 
@@ -50,10 +50,15 @@ class RiscVMiniTest extends AnyFlatSpec {
     // initialize the register file
     sim.poke("dpath.regFile.regs", RiscV.BaseRegs)
 
-
     val monitorSignals = Seq(
-      "io_icache_req_valid", "c_io_dcache_req_bits_mask", "c.mem", "io_icache_req_valid",
-      "dpath.csr.mcause", "dpath.pc", "dpath.fe_pc", "dpath.ew_pc",
+      "io_icache_req_valid",
+      "c_io_dcache_req_bits_mask",
+      "c.mem",
+      "io_icache_req_valid",
+      "dpath.csr.mcause",
+      "dpath.pc",
+      "dpath.fe_pc",
+      "dpath.ew_pc"
     )
 
     // provide a nop
@@ -71,7 +76,7 @@ class RiscVMiniTest extends AnyFlatSpec {
     sim.poke("io_icache_resp_bits_data", RiscV.nop)
 
     // we wait until the memory changes
-    while(sim.peek("c.mem").toString == "Value(mem)") {
+    while (sim.peek("c.mem").toString == "Value(mem)") {
       sim.stepAndMonitor(1, monitorSignals)
     }
 
@@ -79,7 +84,7 @@ class RiscVMiniTest extends AnyFlatSpec {
 
     val memNext = sim.peek("c.mem")
     // TODO: actually check result!
-    if(true) {
+    if (true) {
       println()
       println("Result:")
       val r = memNext.getSMT
@@ -107,9 +112,11 @@ object RiscV {
   // nop is addi x0, x0, 0
   val nop = BVLiteral(BigInt("0010011", 2), 32)
 
-  val symbolicStoreWord = Cat(Seq(BVSlice(Imm, 11,5), Rs2, Rs1, BVLiteral("b010"), BVSlice(Imm, 4, 0), BVLiteral("b0100011")))
+  val symbolicStoreWord = Cat(
+    Seq(BVSlice(Imm, 11, 5), Rs2, Rs1, BVLiteral("b010"), BVSlice(Imm, 4, 0), BVLiteral("b0100011"))
+  )
 
-  private def isX0(addr: BVExpr): BVExpr = BVEqual(addr, BVLiteral(0, 5))
+  private def isX0(addr:    BVExpr): BVExpr = BVEqual(addr, BVLiteral(0, 5))
   private def readReg(addr: BVExpr): BVExpr =
     BVIte(isX0(addr), BVLiteral(0, 32), ArrayRead(BaseRegs, addr))
   private def writeReg(addr: BVExpr, value: BVExpr): ArrayExpr =

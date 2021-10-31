@@ -11,7 +11,7 @@ import maltese.smt
 
 /** simple interface to all supported model checkers */
 object Btor2MC extends App {
-  if(args.length < 1) {
+  if (args.length < 1) {
     println(s"please provide the name of a btor file")
   } else {
     val filename = args.head
@@ -20,12 +20,19 @@ object Btor2MC extends App {
     check(checker, sys, kMax = -1)
   }
 
-  private def check(checker: IsModelChecker, sys: TransitionSystem, kMax: Int, printSys: Boolean = false, debug: Iterable[smt.BVSymbol] = List()): Boolean = {
+  private def check(
+    checker:  IsModelChecker,
+    sys:      TransitionSystem,
+    kMax:     Int,
+    printSys: Boolean = false,
+    debug:    Iterable[smt.BVSymbol] = List()
+  ): Boolean = {
     val btorFile = sys.name + ".btor2"
     val vcdFile = sys.name + ".vcd"
 
-    val fullSys = if(debug.isEmpty) { sys } else { observe(sys, debug) }
-    if(printSys) { println(fullSys.serialize) }
+    val fullSys = if (debug.isEmpty) { sys }
+    else { observe(sys, debug) }
+    if (printSys) { println(fullSys.serialize) }
     val res = checker.check(fullSys, kMax = kMax, fileName = Some(btorFile))
     res match {
       case ModelCheckFail(witness) =>

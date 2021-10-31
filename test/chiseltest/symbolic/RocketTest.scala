@@ -2,7 +2,14 @@ package chiseltest.symbolic
 
 import chiseltest.WriteFstAnnotation
 import chiseltest.internal.CachingAnnotation
-import chiseltest.simulator.{Compiler, SimulatorContext, StepInterrupted, StepOk, VerilatorBackendAnnotation, WriteVcdAnnotation}
+import chiseltest.simulator.{
+  Compiler,
+  SimulatorContext,
+  StepInterrupted,
+  StepOk,
+  VerilatorBackendAnnotation,
+  WriteVcdAnnotation
+}
 import firrtl.{AnnotationSeq, CircuitState}
 import firrtl.annotations._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -10,10 +17,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 import scala.collection.mutable
 
 class RocketTest extends AnyFlatSpec {
-  behavior of "RocketTile from Chipyard"
+  behavior.of("RocketTile from Chipyard")
 
   it should "execute a symbolic add" ignore {
-    val filename = os.pwd / "benchmarks" / "chipyard" / "chipyard.TestHarness.KevinRocketConfig" / "RocketTile.opt.lo.fir"
+    val filename =
+      os.pwd / "benchmarks" / "chipyard" / "chipyard.TestHarness.KevinRocketConfig" / "RocketTile.opt.lo.fir"
     val sim = SymbolicSim.loadFirrtlFile(filename.toString())
 
     // set all inputs to a concrete value and reset design
@@ -23,7 +31,7 @@ class RocketTest extends AnyFlatSpec {
 }
 
 class ConcreteRocketTest extends FlatSpecWithTargetDir {
-  behavior of "RocketTile from Chipyard"
+  behavior.of("RocketTile from Chipyard")
 
   def loadFirrtl(src: String, annos: AnnotationSeq = List()): CircuitState = {
     val state = CircuitState(firrtl.Parser.parse(src), annos)
@@ -40,13 +48,13 @@ class ConcreteRocketTest extends FlatSpecWithTargetDir {
     BigInt("001080B3", 16), // add x1, x1, x1
     BigInt("00108133", 16), // add x2, x1, x1
     BigInt("001081B3", 16), // add x3, x1, x1
-    BigInt("00108233", 16), // add x4, x1, x1
+    BigInt("00108233", 16) // add x4, x1, x1
   )
   val initMemAnno = MemoryArrayInitAnnotation(iCacheMem, instructions ++ Seq.fill(1024 - instructions.size)(BigInt(0)))
 
-
   it should "execute in a simulation" in {
-    val filename = os.pwd / "benchmarks" / "chipyard" / "chipyard.TestHarness.KevinRocketConfig" / "RocketTile.opt.lo.fir"
+    val filename =
+      os.pwd / "benchmarks" / "chipyard" / "chipyard.TestHarness.KevinRocketConfig" / "RocketTile.opt.lo.fir"
     val sim = load(os.read(filename), Seq(WriteFstAnnotation, CachingAnnotation))
 
     val startAddress = 0x10040
@@ -66,7 +74,7 @@ class ConcreteRocketTest extends FlatSpecWithTargetDir {
     (0 until 100).foreach { _ =>
       server.run()
       sim.step() match {
-        case i : StepInterrupted =>
+        case i: StepInterrupted =>
           sim.finish()
           throw new RuntimeException(s"$i")
         case StepOk =>
@@ -92,15 +100,19 @@ class TileLinkServer(prefix: String, sim: SimulatorContext) {
   val dReady = prefix + "d_ready"
   val dValid = prefix + "d_valid"
   def aFired = sim.peek(aReady) == 1 && sim.peek(aValid) == 1
-  def aPacket: Option[AData] = if(!aFired) None else Some(AData(
-    opcode = sim.peek(prefix + "a_bits_opcode").toInt,
-    param = sim.peek(prefix + "a_bits_param").toInt,
-    size = sim.peek(prefix + "a_bits_size").toInt,
-    source = sim.peek(prefix + "a_bits_source").toInt,
-    mask = sim.peek(prefix + "a_bits_mask").toInt,
-    address = sim.peek(prefix + "a_bits_address"),
-    data = sim.peek(prefix + "a_bits_data"),
-  ))
+  def aPacket: Option[AData] = if (!aFired) None
+  else
+    Some(
+      AData(
+        opcode = sim.peek(prefix + "a_bits_opcode").toInt,
+        param = sim.peek(prefix + "a_bits_param").toInt,
+        size = sim.peek(prefix + "a_bits_size").toInt,
+        source = sim.peek(prefix + "a_bits_source").toInt,
+        mask = sim.peek(prefix + "a_bits_mask").toInt,
+        address = sim.peek(prefix + "a_bits_address"),
+        data = sim.peek(prefix + "a_bits_data")
+      )
+    )
 
   private val dPackets = mutable.Queue[DData]()
 
@@ -112,10 +124,10 @@ class TileLinkServer(prefix: String, sim: SimulatorContext) {
   // called once every step
   def run(): Unit = {
 
-    if(sim.peek(cValid) != 0) {
+    if (sim.peek(cValid) != 0) {
       println("TODO: receive C-Channel")
     }
-    if(sim.peek(eValid) != 0) {
+    if (sim.peek(eValid) != 0) {
       println("TODO: receive E-Channel")
     }
 
@@ -133,7 +145,7 @@ class TileLinkServer(prefix: String, sim: SimulatorContext) {
     }
 
     // packet is sent when d channel fires
-    if(dPackets.nonEmpty && sim.peek(dReady) != 0) {
+    if (dPackets.nonEmpty && sim.peek(dReady) != 0) {
       dPackets.dequeue()
     }
 
@@ -147,7 +159,14 @@ class TileLinkServer(prefix: String, sim: SimulatorContext) {
             assert(data.param == 0)
             // send access ack data packages
             (0 until wordsToProcess).foreach { ii =>
-              val resp = DData(opcode = 1, param = 0, size = data.size, source = data.source, sink = 0, data = BigInt("001080B3001080B3", 16))
+              val resp = DData(
+                opcode = 1,
+                param = 0,
+                size = data.size,
+                source = data.source,
+                sink = 0,
+                data = BigInt("001080B3001080B3", 16)
+              )
               dPackets.append(resp)
             }
 

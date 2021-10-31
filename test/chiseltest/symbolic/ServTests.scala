@@ -8,10 +8,13 @@ import maltese.smt
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ServTests extends AnyFlatSpec {
-  behavior of "Chisel re-implementation of serv"
+  behavior.of("Chisel re-implementation of serv")
 
   it should "execute symbolically" in {
-    val sim = SymbolicSim.loadFirrtlFile("benchmarks/riscv/serv/ServTopWithRam.lo.fir", "benchmarks/riscv/serv/ServTopWithRam.anno.json")
+    val sim = SymbolicSim.loadFirrtlFile(
+      "benchmarks/riscv/serv/ServTopWithRam.lo.fir",
+      "benchmarks/riscv/serv/ServTopWithRam.anno.json"
+    )
 
     // set all inputs to a concrete value and reset design
     sim.inputs.foreach(sim.poke(_, 0))

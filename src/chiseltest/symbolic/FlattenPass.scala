@@ -14,7 +14,9 @@ import firrtl.transforms.{DontTouchAllTargets}
 import firrtl._
 
 /** tracks how a reference is renamed */
-case class ReferenceAnno(target: ReferenceTarget, oldName: String) extends SingleTargetAnnotation[ReferenceTarget] with DontTouchAllTargets {
+case class ReferenceAnno(target: ReferenceTarget, oldName: String)
+    extends SingleTargetAnnotation[ReferenceTarget]
+    with DontTouchAllTargets {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 
@@ -40,10 +42,19 @@ object FlattenPass extends Transform with DependencyAPIMigration {
     state.copy(annotations = annos)
   }
 
-  private def inlines(m: ModuleTarget, inst: IsModule)(implicit children: Map[String, Seq[InstanceKey]], moduleMap: Map[String, ir.DefModule], doNotInline: Set[String]): AnnotationSeq = {
-    if(doNotInline.contains(m.module)) { Seq() } else {
-      val childAnnos = children(m.module).flatMap(c => inlines(m.targetParent.module(c.module), inst.instOf(c.name, c.module)))
-      if(m.circuit == m.module) { // never inline the main module
+  private def inlines(
+    m:    ModuleTarget,
+    inst: IsModule
+  )(
+    implicit children: Map[String, Seq[InstanceKey]],
+    moduleMap:         Map[String, ir.DefModule],
+    doNotInline:       Set[String]
+  ): AnnotationSeq = {
+    if (doNotInline.contains(m.module)) { Seq() }
+    else {
+      val childAnnos =
+        children(m.module).flatMap(c => inlines(m.targetParent.module(c.module), inst.instOf(c.name, c.module)))
+      if (m.circuit == m.module) { // never inline the main module
         childAnnos
       } else {
         val stateAnnos = moduleMap(m.module) match {
@@ -65,25 +76,24 @@ object FlattenPass extends Transform with DependencyAPIMigration {
       // TODO: include ports!
       List(ReferenceAnno(m.ref(mem.name), prefix + mem.name))
     case ir.Block(stmts) => stmts.flatMap(onStmt(_, m, prefix))
-    case _ => List()
+    case _               => List()
   }
 
-  /** the InlineInstances pass uses Name instead of Target  */
+  /** the InlineInstances pass uses Name instead of Target */
   private def toName(m: ModuleTarget): ModuleName = ModuleName(m.module, CircuitName(m.circuit))
 
   def toPath(t: Target): String = {
     val tokenString = t.tokens.flatMap {
-      case TargetToken.Ref(r) => Some("." + r)
+      case TargetToken.Ref(r)      => Some("." + r)
       case TargetToken.Instance(i) => Some("." + i)
-      case TargetToken.Field(f) => Some("." + f)
-      case TargetToken.Index(v) => Some("[" + v + "]")
-      case _ => None
+      case TargetToken.Field(f)    => Some("." + f)
+      case TargetToken.Index(v)    => Some("[" + v + "]")
+      case _                       => None
     }.mkString("")
     t.moduleOpt.getOrElse("") + tokenString
   }
 
-  def getRenames(annos: AnnotationSeq): Map[String, String] = annos
-    .collect{ case ReferenceAnno(target, oldName) => oldName -> toPath(target).split('.').drop(1).mkString(".") }
-    .filterNot{ case (o, n) => o == n }
-    .toMap
+  def getRenames(annos: AnnotationSeq): Map[String, String] = annos.collect {
+    case ReferenceAnno(target, oldName) => oldName -> toPath(target).split('.').drop(1).mkString(".")
+  }.filterNot { case (o, n) => o == n }.toMap
 }

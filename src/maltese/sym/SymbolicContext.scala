@@ -24,14 +24,14 @@ class SymbolicContext(val opts: Options) {
     assert(value.width == 1, "satisfiability checks require a boolean formula")
     value.value match {
       case Some(v) => v == 1
-      case None => solver.check(value.symbolic, produceModel = false).isSat
+      case None    => solver.check(value.symbolic, produceModel = false).isSat
     }
   }
   def isValid(value: BVValueSummary): Boolean = {
     assert(value.width == 1, "validity checks require a boolean formula")
     value.value match {
       case Some(v) => v == 1
-      case None =>
+      case None    =>
         // if the inverted value cannot be true, then the original value is always valid
         solver.check(BVNot(value.symbolic), produceModel = false).isUnSat
     }
@@ -42,8 +42,8 @@ class SymbolicContext(val opts: Options) {
 
   ///////////////// BDDs
   private val bddConverter = new BDDToSMTConverter(opts.makeBdds(), opts.ConvertBooleanOpsInSmtToBdd)
-  def smtToBdd(ee: BVExpr): BDD = bddConverter.smtToBdd(ee)
-  def bddToSmt(bdd: BDD): BVExpr = bddConverter.bddToSmt(bdd)
+  def smtToBdd(ee:  BVExpr): BDD = bddConverter.smtToBdd(ee)
+  def bddToSmt(bdd: BDD):    BVExpr = bddConverter.bddToSmt(bdd)
   val tru: BDD = bddConverter.tru
 
   def printStatistics(): Unit = {

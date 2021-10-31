@@ -4,9 +4,7 @@
 
 package maltese
 
-class SymbolTable private(nameToId: Seq[(String, Int)]) {
-
-}
+class SymbolTable private (nameToId: Seq[(String, Int)]) {}
 
 object SymbolTable {
   def scan(sys: mc.TransitionSystem): SymbolTable = {

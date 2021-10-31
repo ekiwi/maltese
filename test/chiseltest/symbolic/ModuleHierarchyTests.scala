@@ -3,7 +3,7 @@ package chiseltest.symbolic
 import org.scalatest.flatspec.AnyFlatSpec
 
 class ModuleHierarchyTests extends AnyFlatSpec {
-  behavior of "SymbolicSim w/ module hierarchies"
+  behavior.of("SymbolicSim w/ module hierarchies")
 
   val oneLevel =
     """circuit test:

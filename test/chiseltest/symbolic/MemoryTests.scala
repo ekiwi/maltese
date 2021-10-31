@@ -4,13 +4,19 @@
 
 package chiseltest.symbolic
 
-import firrtl.annotations.{CircuitTarget, MemoryArrayInitAnnotation, MemoryFileInlineAnnotation, MemoryLoadFileType, MemoryScalarInitAnnotation}
+import firrtl.annotations.{
+  CircuitTarget,
+  MemoryArrayInitAnnotation,
+  MemoryFileInlineAnnotation,
+  MemoryLoadFileType,
+  MemoryScalarInitAnnotation
+}
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.util.Random
 
 class MemoryTests extends AnyFlatSpec {
-  behavior of "SymbolicSim w/ Memories"
+  behavior.of("SymbolicSim w/ Memories")
 
   private val simpleMem =
     """circuit Test :
@@ -41,7 +47,6 @@ class MemoryTests extends AnyFlatSpec {
       |
       """.stripMargin
   private val memTarget = CircuitTarget("Test").module("Test").ref("m")
-
 
   it should "memory primitives should run this circuit" in {
     val sim = SymbolicSim.loadFirrtl(simpleMem)
@@ -88,10 +93,11 @@ class MemoryTests extends AnyFlatSpec {
     def data = sim.peek("dataOut")
 
     // with a concrete address, we should get a concrete value
-    values.zipWithIndex.foreach { case (value, addr) =>
-      sim.poke("addr", addr)
-      assert(data.isConcrete)
-      assert(data.getValue == value)
+    values.zipWithIndex.foreach {
+      case (value, addr) =>
+        sim.poke("addr", addr)
+        assert(data.isConcrete)
+        assert(data.getValue == value)
     }
 
     // with a symbolic address, we get a symbolic value

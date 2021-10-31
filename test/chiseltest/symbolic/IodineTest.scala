@@ -7,7 +7,7 @@ package chiseltest.symbolic
 import org.scalatest.flatspec.AnyFlatSpec
 
 class IodineTest extends AnyFlatSpec {
-  behavior of "iodine FPU"
+  behavior.of("iodine FPU")
 
   it should "execute symbolically" in {
     val sim = SymbolicSim.loadBtor("benchmarks/iodine/divider.btor2")

@@ -11,23 +11,23 @@ import firrtl._
 import scala.collection.mutable
 
 /** Loads memory initialization files at compile time instead of at simulation/synthesis time.
- *  This works by turning
- * */
+  *  This works by turning
+  */
 object MemoryFileInitPass extends Transform with DependencyAPIMigration {
   // we only want to annotate ground type state
   override def prerequisites = Forms.LowForm
   override def invalidates(a: Transform): Boolean = false
 
   override protected def execute(state: CircuitState): CircuitState = {
-    val loadMem = state.annotations.collect{
-      case a: LoadMemoryAnnotation => InitFileAnno(a.target.toTarget, a.fileName, toBase(a.hexOrBinary))
+    val loadMem = state.annotations.collect {
+      case a: LoadMemoryAnnotation       => InitFileAnno(a.target.toTarget, a.fileName, toBase(a.hexOrBinary))
       case a: MemoryFileInlineAnnotation => InitFileAnno(a.target, a.filename, toBase(a.hexOrBinary))
     }
 
-    if(loadMem.isEmpty) return state
+    if (loadMem.isEmpty) return state
 
     val oldAnnos = state.annotations.filter {
-      case _: LoadMemoryAnnotation => false
+      case _: LoadMemoryAnnotation       => false
       case _: MemoryFileInlineAnnotation => false
       case _ => true
     }
@@ -38,7 +38,7 @@ object MemoryFileInitPass extends Transform with DependencyAPIMigration {
 
   private def convertAnno(a: InitFileAnno): Annotation = {
     val values = load(a.file, a.base)
-    if(allTheSame(values)) {
+    if (allTheSame(values)) {
       MemoryScalarInitAnnotation(a.target, values.head)
     } else {
       MemoryArrayInitAnnotation(a.target, values)
@@ -63,7 +63,7 @@ object MemoryFileInitPass extends Transform with DependencyAPIMigration {
     var token = ""
     content.map(_.toLower).foreach {
       case ' ' | '\t' | '\n' =>
-        if(token.nonEmpty) {
+        if (token.nonEmpty) {
           val w = BigInt(token, base)
           words.append(w)
           token = ""
@@ -74,8 +74,8 @@ object MemoryFileInitPass extends Transform with DependencyAPIMigration {
     words.toSeq
   }
 
-  private def toBase(hexOrBinary:  MemoryLoadFileType): Int = hexOrBinary match {
-    case MemoryLoadFileType.Hex => 16
+  private def toBase(hexOrBinary: MemoryLoadFileType): Int = hexOrBinary match {
+    case MemoryLoadFileType.Hex    => 16
     case MemoryLoadFileType.Binary => 2
   }
 }

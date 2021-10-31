@@ -89,7 +89,7 @@ class MalteseArrayTests extends AnyFlatSpec {
     assert(mem.load(addr(0)) == ArrayRead(array_1, addr(0)))
     // reading from any other address should only include the store to a symbolic address
     val array_2 = ArrayStore(memSymbol, addrSym, b)
-    (1 until 8).foreach{ i =>
+    (1 until 8).foreach { i =>
       assert(mem.load(addr(i)) == ArrayRead(array_2, addr(i)))
     }
   }

@@ -9,7 +9,7 @@ import com.github.javabdd.{BDDFactory, JFactory}
 
 case class Options(
   // MultiSE 3.2: without coalescing we get an algorithm that behaves essentially like conventional DSE
-  DoNotCoalesce : Boolean,
+  DoNotCoalesce: Boolean,
   // This will slow down symbolic execution significantly, only enable for debugging
   //CrosscheckSmtAndConcrete : Boolean = false,
   // Do not use the SMT formula cache (this enforces a solver call for every isValid or isUnSat query)
@@ -33,10 +33,9 @@ case class Options(
   // This way the value summary will always have max. two entries.
   ImportBooleanExpressionsIntoGuard: Boolean,
   // SMT solver to use
-  solver : Solver,
+  solver: Solver,
   // BDD implementation
-  makeBdds : () => BDDFactory,
-)
+  makeBdds: () => BDDFactory)
 
 object Options {
   val Default: Options = Options(
@@ -45,6 +44,6 @@ object Options {
     CheckITEConditionWithSmtSolver = false,
     ImportBooleanExpressionsIntoGuard = true,
     solver = Z3SMTLib,
-    makeBdds = () => JFactory.init(100, 100),
+    makeBdds = () => JFactory.init(100, 100)
   )
 }

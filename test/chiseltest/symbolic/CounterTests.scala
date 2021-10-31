@@ -9,7 +9,7 @@ import firrtl.annotations.{CircuitTarget, PresetRegAnnotation}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CounterTests extends AnyFlatSpec {
-  behavior of "SymbolicSim with simple btor2 counters"
+  behavior.of("SymbolicSim with simple btor2 counters")
 
   it should "be able to execute the simple count2 example" in {
     val src = FileUtils.getTextResource("/btormc/count2.btor2")
@@ -24,7 +24,6 @@ class CounterTests extends AnyFlatSpec {
     }
     assert(e.toString.contains("cycle 7"))
   }
-
 
   it should "be able to execute the twocount2 example with concrete inputs" in {
     val src = FileUtils.getTextResource("/btormc/twocount2.btor2")
@@ -122,7 +121,6 @@ class CounterTests extends AnyFlatSpec {
     assert(e.toString.contains("cycle 7"))
   }
 
-
   val twocount2 =
     """circuit twocount2:
       |  module twocount2:
@@ -141,7 +139,7 @@ class CounterTests extends AnyFlatSpec {
       |""".stripMargin
   val twocount2Annos = Seq(
     PresetRegAnnotation(CircuitTarget("twocount2").module("twocount2").ref("a")),
-    PresetRegAnnotation(CircuitTarget("twocount2").module("twocount2").ref("b")),
+    PresetRegAnnotation(CircuitTarget("twocount2").module("twocount2").ref("b"))
   )
 
   it should "be able to execute the twocount2 example (translated to firrtl) with concrete inputs" in {
