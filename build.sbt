@@ -19,10 +19,8 @@ libraryDependencies += "com.github.com-github-javabdd" % "com.github.javabdd" % 
 // scalatest has the best IntelliJ support
 libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.1" % "test"
 
-// the reusable SMT libary is separate
+// chiseltest for symbolic execution interface
 resolvers += Resolver.sonatypeRepo("snapshots")
-libraryDependencies += "edu.berkeley.cs" %% "maltese-smt" % "0.5-SNAPSHOT"
-
 libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.5-SNAPSHOT"
 
 // fork tests as native libraries aren't necessarily thread safe
