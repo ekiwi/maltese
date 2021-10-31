@@ -2,9 +2,7 @@ name: Maltese Unittests
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   test:
@@ -62,3 +60,19 @@ jobs:
     - name: Run Unittests
       timeout-minutes: 3
       run: sbt test
+
+  doc:
+    name: Documentation and Formatting
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Scala
+        uses: olafurpg/setup-scala@v10
+      - name: Cache
+        uses: coursier/cache-action@v5
+      - name: Documentation
+        id: doc
+        run: sbt doc
+      - name: Check Formatting
+        run: sbt scalafmtCheckAll
