@@ -12,8 +12,9 @@ import scala.collection.mutable
 class RocketTest extends AnyFlatSpec {
   behavior of "RocketTile from Chipyard"
 
-  it should "execute a symbolic add" in {
-    val sim = SymbolicSim.loadFirrtlFile("benchmarks/chipyard/chipyard.TestHarness.RocketConfig/RocketTile.fir")
+  it should "execute a symbolic add" ignore {
+    val filename = os.pwd / "benchmarks" / "chipyard" / "chipyard.TestHarness.KevinRocketConfig" / "RocketTile.opt.lo.fir"
+    val sim = SymbolicSim.loadFirrtlFile(filename.toString())
 
     // set all inputs to a concrete value and reset design
     sim.inputs.foreach(sim.poke(_, 0))
